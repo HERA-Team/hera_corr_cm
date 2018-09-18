@@ -151,6 +151,7 @@ class HeraCorrCM(object):
         while (time.time() < (t + timeout)):
             if not self.phase_switch_is_on():
                 return OK
+            time.sleep(0.1)
         return ERROR
             
 
@@ -167,6 +168,7 @@ class HeraCorrCM(object):
         while (time.time() < (t + timeout)):
             if self.phase_switch_is_on():
                 return OK
+            time.sleep(0.1)
         return ERROR
 
     def phase_switch_is_on(self):
@@ -217,6 +219,7 @@ class HeraCorrCM(object):
         while (time.time() < (t + timeout)):
             if self.noise_diode_is_on():
                 return OK
+            time.sleep(0.1)
         return ERROR
 
     def noise_diode_disable(self):
@@ -231,6 +234,7 @@ class HeraCorrCM(object):
         while (time.time() < (t + timeout)):
             if not self.noise_diode_is_on():
                 return OK
+            time.sleep(0.1)
         return ERROR
 
     def noise_diode_is_on(self):
