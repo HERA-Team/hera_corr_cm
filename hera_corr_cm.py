@@ -123,9 +123,10 @@ class HeraCorrCM(object):
             return ERROR
         else:
             sent_message = self._send_message("record", starttime=starttime, duration=duration, tag=tag, acclen=acclen)
+            if sent_message is None:
+                return ERROR
             response = self._get_response(sent_message)
             if response is None:
-                self.logger.error("Tried to start taking data and got no response!")
                 return ERROR
             try:
                 time_diff = starttime - response["starttime"] # correlator always rounds down
@@ -146,12 +147,14 @@ class HeraCorrCM(object):
         """
         if not self._require_not_recording():
             return ERROR
-        self._send_message("phase_switch", activate=False)
-        t = time.time()
-        while (time.time() < (t + timeout)):
-            if not self.phase_switch_is_on():
-                return OK
-            time.sleep(0.1)
+        sent_message = self._send_message("phase_switch", activate=False)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if not self.phase_switch_is_on():
+            return OK
         return ERROR
             
 
@@ -163,12 +166,14 @@ class HeraCorrCM(object):
         """
         if not self._require_not_recording():
             return ERROR
-        self._send_message("phase_switch", activate=False)
-        t = time.time()
-        while (time.time() < (t + timeout)):
-            if self.phase_switch_is_on():
-                return OK
-            time.sleep(0.1)
+        sent_message = self._send_message("phase_switch", activate=True)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if self.phase_switch_is_on():
+            return OK
         return ERROR
 
     def phase_switch_is_on(self):
@@ -214,12 +219,14 @@ class HeraCorrCM(object):
         """
         if not self._require_not_recording():
             return ERROR
-        self._send_message("noise_diode", activate=True)
-        t = time.time()
-        while (time.time() < (t + timeout)):
-            if self.noise_diode_is_on():
-                return OK
-            time.sleep(0.1)
+        sent_message = self._send_message("noise_diode", activate=True)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if self.noise_diode_is_on():
+            return OK
         return ERROR
 
     def noise_diode_disable(self):
@@ -229,12 +236,14 @@ class HeraCorrCM(object):
         """
         if not self._require_not_recording():
             return ERROR
-        self._send_message("noise_diode", activate=False)
-        t = time.time()
-        while (time.time() < (t + timeout)):
-            if not self.noise_diode_is_on():
-                return OK
-            time.sleep(0.1)
+        sent_message = self._send_message("noise_diode", activate=False)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if not self.noise_diode_is_on():
+            return OK
         return ERROR
 
     def noise_diode_is_on(self):
