@@ -96,6 +96,17 @@ class HeraCorrCM(object):
         """
         return self.r.exists("corr:is_taking_data")
 
+    def next_start_time(self):
+        """
+        Return the last trigger time (as a UNIX timestamp float) sent to the correlator.
+        If this is in the future, the correlator is waiting to start taking data.
+        If no valid timestamp exists, return 0.
+        """
+        if self.r.exists("corr:trig_time"):
+            return float(self.r["corr:trig_time"])
+        else:
+            return 0.0
+
     def _require_not_recording(self):
         if self.is_recording():
             self.logger.error("Correlator is recording!")
@@ -159,6 +170,19 @@ class HeraCorrCM(object):
                 return ERROR
             self.logger.info("Starting correlator at time %s" % time.ctime(response["starttime"]))
             return response["starttime"]
+
+    def stop_taking_data(self):
+        """
+        Stop the correlator data collection process.
+        """
+        sent_message = self._send_message("stop")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        return OK
+
 
     def phase_switch_disable(self, timeout=10):
         """
