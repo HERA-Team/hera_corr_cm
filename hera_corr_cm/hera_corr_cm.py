@@ -8,6 +8,9 @@ from helpers import add_default_log_handlers
 OK = True
 ERROR = False
 
+N_CHAN = 16384
+SAMPLE_RATE = 500e6
+
 LOGGER = add_default_log_handlers(logging.getLogger(__name__))
 
 class HeraCorrCM(object):
