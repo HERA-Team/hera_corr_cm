@@ -100,19 +100,36 @@ class HeraCorrCM(object):
         else:
             return True
 
+    def secs_to_n_spectra(self, secs):
+        """
+        Return the number of spectra in a given interval of `secs` seconds.
+        """
+        return secs / ((2.0*N_CHAN) / SAMPLE_RATE)
+
+    def n_spectra_to_secs(self, n):
+        """
+        Return the time interval in seconds corresponding to `n` spectra.
+        """
+        return n * ((2.0*N_CHAN) / SAMPLE_RATE)
+
+
     def take_data(self, starttime, duration, acclen, tag=None):
         """
         Start data collection on the correlator.
         
         Args:
-            starttime: Unix time at which to start taking
-                data. Actual start time will be rounded to
-                nearest ?? ms.
-            duration: Duration of observation in seconds.
+            starttime (integer): Unix time at which to start taking
+                data, in ms.
+            duration (float): Duration of observation in seconds.
                 After this time, the correlator will stop
-                recording.
-            acclen: Accumulation length in spectra.
-            tag: Tag which will end up in data files as a header
+                recording. E.g., for an accumulation time of 10 seconds,
+                and a duration of 65 seconds, the correlator will record
+                7 samples.
+            acclen (integer): The number of spectra to accumulate per
+                correlator dump. Will be rounded to a multiple of 2048. Use the
+                secs_to_n_spectra() method to convert a desired integration
+                time to a number of spectra.
+            tag (string or None): Tag which will end up in data files as a header
                 entry.
 
         Returns: Unix time at which the correlator has been
@@ -138,7 +155,7 @@ class HeraCorrCM(object):
                 self.logger.warning("Time difference between commanded and accepted start time is %f" % time_diff)
                 return ERROR
             self.logger.info("Starting correlator at time %s" % time.ctime(response["starttime"]))
-            return OK
+            return response["starttime"]
 
     def phase_switch_disable(self, timeout=10):
         """
