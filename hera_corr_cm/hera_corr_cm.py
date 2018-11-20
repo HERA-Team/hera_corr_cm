@@ -92,9 +92,18 @@ class HeraCorrCM(object):
 
     def is_recording(self):
         """
-        Return True if the correlator is currently taking data.
+        Returns: recording_state, UNIX time of last state change (float)
+        recording_state is True if the correlator is currently taking data.
+        
+        Note: in the case that the correlator is not running, but we don't know
+              when it stopped (e.g., because it was not shutdown gracefully)
+              the returned time will be `None`
         """
-        return self.r.exists("corr:is_taking_data")
+        if not self.r.exists("corr:is_taking_data"):
+            return False, None
+        else:
+            x = self.r.hgetall("corr:is_taking_data")
+            return x["state"] == True, float(x["time"])
 
     def next_start_time(self):
         """
@@ -108,7 +117,8 @@ class HeraCorrCM(object):
             return 0.0
 
     def _require_not_recording(self):
-        if self.is_recording():
+        recording, recording_time = self.is_recording()
+        if recording:
             self.logger.error("Correlator is recording!")
             return False
         else:
@@ -149,7 +159,8 @@ class HeraCorrCM(object):
         Returns: Unix time at which the correlator has been
             instructed to start recording.
         """
-        if self.is_recording():
+        recording, recording_time = self.is_recording()
+        if recording:
             self.logger.error("Cannot start correlator -- it is already taking data")
             return ERROR
         else:
@@ -197,7 +208,7 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if not self.phase_switch_is_on():
+        if not self.phase_switch_is_on()[0]:
             return OK
         return ERROR
             
@@ -216,15 +227,17 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if self.phase_switch_is_on():
+        if self.phase_switch_is_on()[0]:
             return OK
         return ERROR
 
     def phase_switch_is_on(self):
         """
-        Returns True if phase switching is on. Else False.
+        Returns: enable_state, UNIX timestamp (float) of last state change
+        enable_state is True if phase switching is on. Else False.
         """
-        return self.r["corr:status_phase_switch"] == "on"
+        x = self.r.hgetall("corr:status_phase_switch")
+        return x["state"] == "on", float(x["time"])
             
 
     def update_config(self, configfile):
@@ -272,7 +285,7 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if self.noise_diode_is_on():
+        if self.noise_diode_is_on()[0]:
             return OK
         return ERROR
 
@@ -289,15 +302,17 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if not self.noise_diode_is_on():
+        if not self.noise_diode_is_on()[0]:
             return OK
         return ERROR
 
     def noise_diode_is_on(self):
         """
-        Returns True if noise diode is on. Else False.
+        Returns: enable_state, UNIX timestamp (float) of last state change
+        enable_state is True if noise diode is on. Else False.
         """
-        return self.r["corr:status_noise_diode"] == "on"
+        x = self.r.hgetall("corr:status_noise_diode")
+        return x["state"] == "on", float(x["time"])
 
     def get_bit_stats(self):
         """
