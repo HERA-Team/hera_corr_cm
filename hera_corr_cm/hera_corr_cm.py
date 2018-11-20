@@ -246,11 +246,12 @@ class HeraCorrCM(object):
         """
         Get the currently loaded configuration, as a
         processed yaml string.
-        Returns: last update time (UNIX timestamp float), Configuration structure
+        Returns: last update time (UNIX timestamp float), Configuration structure, configuration hash
         """
-        config  = self.r.hget("snap_configuration", "config")
+        config      = self.r.hget("snap_configuration", "config")
         config_time = self.r.hget("snap_configuration", "upload_time")
-        return float(config_time), yaml.load(config)
+        md5         = self.r.hget("snap_configuration", "md5")
+        return float(config_time), yaml.load(config), md5
 
     def restart(self):
         """
