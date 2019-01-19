@@ -19,6 +19,12 @@ class HeraCorrCM(object):
     the HERA correlator (i.e., SNAP boards,
     and X-engines) via a redis message store.
     """
+    # A class-wide variable to hold redis connections.
+    # This prevents multiple instances of HeraCorrCM
+    # from creating lots and lots (and lots) of redis connections
+    redis_connections = {}
+    response_channels = {}
+
     def __init__(self, redishost="redishost", logger=LOGGER):
         """
         Create a connection to the correlator
@@ -31,11 +37,21 @@ class HeraCorrCM(object):
             logger: A logging instance. If not provided,
                 the class will instantiate its own.
         """
-        self.r = redis.Redis(redishost)
         self.logger = logger
-        self.corr_resp_chan = self.r.pubsub()
-        self.corr_resp_chan.subscribe("corr:response")
-        self.corr_resp_chan.get_message(timeout=0.1) # flush "I've just subscribed" message
+        # If the redishost is one we've already connected to, use it again.
+        # Otherwise, add it.
+        # Also share response channels. This opens the door to all sorts of
+        # unintended consequences if you try to multithread access to
+        # multiple HeraCorrCM instances in the same program. But in most cases
+        # sharing means the code will just do The Right Thing, and won't leave
+        # a trail of a orphaned connections.
+        if redishost not in self.redis_connections.keys():
+            self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
+            self.response_channels[redishost] = self.r.pubsub()
+            self.response_channels[redishost].subscribe("corr:response")
+            self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
+        self.r = self.redis_connections[redishost]
+        self.corr_resp_chan = self.response_channels[redishost]
 
     def _get_response(self, command, timeout=10):
         """
