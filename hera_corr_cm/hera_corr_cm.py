@@ -47,7 +47,7 @@ class HeraCorrCM(object):
         # a trail of a orphaned connections.
         if redishost not in self.redis_connections.keys():
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
-            self.response_channels[redishost] = self.r.pubsub()
+            self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
             self.response_channels[redishost].subscribe("corr:response")
             self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
@@ -71,6 +71,8 @@ class HeraCorrCM(object):
             self.logger.error("Failed to decode sent command")
         target_time = sent_message["time"]
         target_cmd  = sent_message["command"]
+        # This loop only gets activated if we get a response which
+        # isn't for us.
         while(True):
             message = self.corr_resp_chan.get_message(timeout=timeout)
             if message is None:
@@ -101,7 +103,7 @@ class HeraCorrCM(object):
         message = json.dumps({"command":command, "time":time.time(), "args":kwargs})
         listeners = self.r.publish("corr:message", message)
         if listeners == 0:
-            self.logger.error("Sent command but no-one is listening!")
+            self.logger.error("Sent command %s but no-one is listening!" % command)
             return None
         else:
             return message
@@ -119,7 +121,7 @@ class HeraCorrCM(object):
             return False, None
         else:
             x = self.r.hgetall("corr:is_taking_data")
-            return x["state"] == True, float(x["time"])
+            return x["state"] == "True", float(x["time"])
 
     def next_start_time(self):
         """
@@ -183,19 +185,20 @@ class HeraCorrCM(object):
             sent_message = self._send_message("record", starttime=starttime, duration=duration, tag=tag, acclen=acclen)
             if sent_message is None:
                 return ERROR
-            response = self._get_response(sent_message)
+            response = self._get_response(sent_message, timeout=30)
             if response is None:
                 return ERROR
             try:
+                # in ms
                 time_diff = starttime - response["starttime"] # correlator always rounds down
             except:
                 self.logger.error("Couldn't parse response %s" % response)
                 return ERROR
            
-            if time_diff  > 0.1:
-                self.logger.warning("Time difference between commanded and accepted start time is %f" % time_diff)
+            if time_diff  > 100:
+                self.logger.warning("Time difference between commanded and accepted start time is %fms" % time_diff)
                 return ERROR
-            self.logger.info("Starting correlator at time %s" % time.ctime(response["starttime"]))
+            self.logger.info("Starting correlator at time %s (%.3fms before commanded)" % (time.ctime(response["starttime"] / 1000.), time_diff))
             return response["starttime"]
 
     def stop_taking_data(self):
