@@ -394,6 +394,8 @@ class HeraCorrCM(object):
             uptime (int)     : Multiples of 500e6 ADC clocks since last programming cycle
             last_programmed (datetime) : Last time this FPGA was programmed
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
+
+            Unknown values return the string "None"
         """
         stats = self._get_status_keys("snap")
         conv_methods = {
@@ -404,6 +406,46 @@ class HeraCorrCM(object):
             'uptime'    : int,
             'last_programmed' : dateutil.parser.parse,
             'timestamp' : dateutil.parser.parse,
+        }
+        rv = {}
+        for host, val in stats.iteritems():
+            rv[host] = {}
+            for key, convfunc in conv_methods.iteritems():
+                try:
+                    rv[host][key] = convfunc(stats[host][key])
+                except:
+                    rv[host][key] = "None"
+        return rv
+
+    def get_ant_status(self):
+        """
+        Returns a dictionary of antenna status flags. Keys of returned dictionaries are
+        of the form "<antenna number>:"<e|n>". Values of this dictionary are status key/val pairs.
+
+        These keys are:
+            adc_mean (float)  : Mean ADC value (in ADC units)
+            adc_rms (float)   : RMS ADC value (in ADC units)
+            adc_power (float) : Mean ADC power (in ADC units squared)
+            f_host (str)      : The hostname of the SNAP board to which this antenna is connected
+            host_ant_id (int) : The SNAP ADC channel number (0-7) to which this antenna is connected
+            pam_atten (int)   : PAM attenuation setting for this antenna (dB)
+            pam_power (float) : PAM power sensor reading for this antenna (dBm)
+            eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
+            timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
+
+            Unknown values return the string "None"
+        """
+        stats = self._get_status_keys("ant")
+        conv_methods = {
+            'adc_mean'    : float,
+            'adc_rms'     : float,
+            'adc_power'   : float,
+            'f_host'      : str,
+            'host_ant_id' : int,
+            'pam_atten'   : int,
+            'pam_power'   : float,
+            'eq_coeffs'   : json.loads,
+            'timestamp'   : dateutil.parser.parse,
         }
         rv = {}
         for host, val in stats.iteritems():
