@@ -3,6 +3,7 @@ import redis
 import logging
 import yaml
 import json
+import dateutil.parser
 from helpers import add_default_log_handlers
 
 OK = True
@@ -122,6 +123,24 @@ class HeraCorrCM(object):
         else:
             x = self.r.hgetall("corr:is_taking_data")
             return x["state"] == "True", float(x["time"])
+
+    def _conv_float(self, v):
+        """
+        Try and convert v into a float. If we can't, return None.
+        """
+        try:
+            return float(v)
+        except ValueError:
+            return None
+
+    def _conv_int(self, v):
+        """
+        Try and convert v into an int. If we can't, return None.
+        """
+        try:
+            return int(v)
+        except ValueError:
+            return None
 
     def next_start_time(self):
         """
@@ -340,10 +359,61 @@ class HeraCorrCM(object):
         times, so each is accompanied by a timestamp.
         """
 
+    def _get_status_keys(self, stattype):
+        """
+        Get a list of keys which exist in redis of the form
+        status:`class`:*, and return a dictionary, keyed by these values,
+        each entry of which is a redis HGETALL of this key.
+
+        Args:
+            stattype (str): Type of status keys to look for. e.g. "snap"
+                         gets all "status:snap:*" keys
+        Returns: dictionary of HGETALL of found keys.
+            eg: {
+                    {"heraNode1Snap0" : {"temp":55.3, "ip_address": "10.0.1.100", ... },
+                    {"heraNode1Snap1" : {"temp":61.4, "ip_address": "10.0.1.101", ... },
+                }
+        """
+        keystart = "status:%s:" % stattype
+        rv = {}
+        for key in self.r.keys():
+            if key.startswith(keystart):
+                rv[key.lstrip(keystart)] = self.r.hgetall(key)
+        return rv
+
     def get_f_status(self):
         """
-        Returns a dictionary of snap status flags. 
+        Returns a dictionary of snap status flags. Keys of returned dictionaries are
+        snap hostnames. Values of this dictionary are status key/val pairs.
+
+        These keys are:
+            pmb_alert (bool) : True if SNAP PSU controllers have issued an alert. False otherwise.
+            pps_count (int)  : Number of PPS pulses received since last programming cycle
+            serial (str)     : Serial number of this SNAP board
+            temp (float)     : Reported FPGA temperature (degrees C)
+            uptime (int)     : Multiples of 500e6 ADC clocks since last programming cycle
+            last_programmed (datetime) : Last time this FPGA was programmed
+            timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
         """
+        stats = self._get_status_keys("snap")
+        conv_methods = {
+            'pmb_alert' : lambda x : bool(int(x)),
+            'pps_count' : int,
+            'serial'    : str,
+            'temp'      : float,
+            'uptime'    : int,
+            'last_programmed' : dateutil.parser.parse,
+            'timestamp' : dateutil.parser.parse,
+        }
+        rv = {}
+        for host, val in stats.iteritems():
+            rv[host] = {}
+            for key, convfunc in conv_methods.iteritems():
+                try:
+                    rv[host][key] = convfunc(stats[host][key])
+                except:
+                    rv[host][key] = "None"
+        return rv
 
     def get_x_status(self):
         """
