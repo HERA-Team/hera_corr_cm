@@ -4,7 +4,9 @@ import logging
 import yaml
 import json
 import dateutil.parser
+import datetime
 from helpers import add_default_log_handlers
+from . import __package__, __version__
 
 OK = True
 ERROR = False
@@ -469,8 +471,45 @@ class HeraCorrCM(object):
 
     def get_version(self):
         """
-        Returns a dictionary of git hashes for various software/firmware modules
+        Returns the version of various software modules in dictionary form.
+        Keys of this dictionary are software packages, e.g. "hera_corr_f".
+        The values of this dictionary are themselves dicts, with keys:
+            "version" : A version string for this package
+            "timestamp" : A datetime object indicating when this version was last reported to redis
+
+        There is one special key, "snap", in the top-level of the returned dictionary. This stores
+        software and configuration states at the time the SNAPs were last initialized with the
+        `hera_snap_feng_init.py` script. For the "snap" dictionary keys are:
+            "version" : version string for the hera_corr_f package.
+            "init_args" : arguments passed to the inialization script at runtime
+            "config" : Configuration file used at initialization time
+            "config_timestamp" : datetime instance indicating when this file was updated in redis
+            "config_md5" : MD5 hash of this config file
+            "timestamp" : datetime object indicating when the initialization script was called. 
         """
+        rv = {}
+        for key in self.r.keys():
+            if key.startswith("version:"):
+                newkey = key.lstrip("version:")
+                rv[newkey] = {}
+                x = self.r.hgetall(key)
+                rv[newkey]["version"] = x["version"]
+                rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
+        
+        # Add this package
+        rv[__package__] = {"version": __version__, "timestamp":datetime.datetime.now()}
+
+        # SNAP init is a special case
+        snap_init = self.r.hgetall("init_configuration")
+        rv["snap"] = {}
+        rv["snap"]["version"] = snap_init["hera_corr_f_version"]
+        rv["snap"]["init_args"] = snap_init["init_args"]
+        rv["snap"]["config"] = snap_init["config"]
+        rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))
+        rv["snap"]["config_md5"] = snap_init["md5"]
+        rv["snap"]["timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["init_time"]))
+
+        return rv
 
     def run_correlator_test(self):
         """
