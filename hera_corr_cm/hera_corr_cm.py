@@ -482,7 +482,7 @@ class HeraCorrCM(object):
         `hera_snap_feng_init.py` script. For the "snap" dictionary keys are:
             "version" : version string for the hera_corr_f package.
             "init_args" : arguments passed to the inialization script at runtime
-            "config" : Configuration file used at initialization time
+            "config" : Configuration structure used at initialization time
             "config_timestamp" : datetime instance indicating when this file was updated in redis
             "config_md5" : MD5 hash of this config file
             "timestamp" : datetime object indicating when the initialization script was called. 
@@ -504,7 +504,7 @@ class HeraCorrCM(object):
         rv["snap"] = {}
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]
-        rv["snap"]["config"] = snap_init["config"]
+        rv["snap"]["config"] = yaml.load(snap_init["config"])
         rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))
         rv["snap"]["config_md5"] = snap_init["md5"]
         rv["snap"]["timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["init_time"]))
