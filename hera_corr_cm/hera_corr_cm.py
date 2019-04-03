@@ -472,7 +472,8 @@ class HeraCorrCM(object):
     def get_version(self):
         """
         Returns the version of various software modules in dictionary form.
-        Keys of this dictionary are software packages, e.g. "hera_corr_f".
+        Keys of this dictionary are software packages, e.g. "hera_corr_cm", or of the form
+        <package>:<script> for daemonized processes, e.g. "udpSender:hera_node_receiver.py".
         The values of this dictionary are themselves dicts, with keys:
             "version" : A version string for this package
             "timestamp" : A datetime object indicating when this version was last reported to redis
