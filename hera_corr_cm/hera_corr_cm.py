@@ -8,6 +8,8 @@ import datetime
 from helpers import add_default_log_handlers
 from . import __package__, __version__
 
+from hera_corr_f import HeraCorrelator
+
 OK = True
 ERROR = False
 
@@ -55,6 +57,7 @@ class HeraCorrCM(object):
             self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
+        self.corr = HeraCorrelator(redishost=redishost, logger=Logger, use_redis=True)
 
     def _get_response(self, command, timeout=10):
         """
@@ -64,7 +67,7 @@ class HeraCorrCM(object):
         Args:
             command: The command (JSON string) issued to the correlator.
             timeout: How many seconds to wait for a correlator response.
-       
+
         Returns:
             Whatever the correlator returns for the given command
         """
@@ -82,7 +85,7 @@ class HeraCorrCM(object):
                 self.logger.error("Timed out waiting for a correlator response")
                 return
             try:
-                message = json.loads(message["data"])   
+                message = json.loads(message["data"])
             except:
                 self.logger.warning("Got a non-JSON message on the correlator response channel")
                 continue
@@ -99,7 +102,7 @@ class HeraCorrCM(object):
         Args:
             command: correlator command
             **kwargs: optional arguments for this command
-        
+
         Returns:
             correlator response to this command
         """
@@ -115,7 +118,7 @@ class HeraCorrCM(object):
         """
         Returns: recording_state, UNIX time of last state change (float)
         recording_state is True if the correlator is currently taking data.
-        
+
         Note: in the case that the correlator is not running, but we don't know
               when it stopped (e.g., because it was not shutdown gracefully)
               the returned time will be `None`
@@ -179,7 +182,7 @@ class HeraCorrCM(object):
     def take_data(self, starttime, duration, acclen, tag=None):
         """
         Start data collection on the correlator.
-        
+
         Args:
             starttime (integer): Unix time at which to start taking
                 data, in ms.
@@ -215,7 +218,7 @@ class HeraCorrCM(object):
             except:
                 self.logger.error("Couldn't parse response %s" % response)
                 return ERROR
-           
+
             if time_diff  > 100:
                 self.logger.warning("Time difference between commanded and accepted start time is %fms" % time_diff)
                 return ERROR
@@ -251,7 +254,7 @@ class HeraCorrCM(object):
         if not self.phase_switch_is_on()[0]:
             return OK
         return ERROR
-            
+
 
     def phase_switch_enable(self):
         """
@@ -278,7 +281,7 @@ class HeraCorrCM(object):
         """
         x = self.r.hgetall("corr:status_phase_switch")
         return x["state"] == "on", float(x["time"])
-            
+
 
     def update_config(self, configfile):
         """
@@ -461,12 +464,12 @@ class HeraCorrCM(object):
 
     def get_x_status(self):
         """
-        Returns a dictionary of X-engine status flags. 
+        Returns a dictionary of X-engine status flags.
         """
 
     def get_feed_status(self):
         """
-        Returns a dictionary of feed sensor values. 
+        Returns a dictionary of feed sensor values.
         """
 
     def get_version(self):
@@ -486,7 +489,7 @@ class HeraCorrCM(object):
             "config" : Configuration structure used at initialization time
             "config_timestamp" : datetime instance indicating when this file was updated in redis
             "config_md5" : MD5 hash of this config file
-            "timestamp" : datetime object indicating when the initialization script was called. 
+            "timestamp" : datetime object indicating when the initialization script was called.
         """
         rv = {}
         for key in self.r.keys():
@@ -496,7 +499,7 @@ class HeraCorrCM(object):
                 x = self.r.hgetall(key)
                 rv[newkey]["version"] = x["version"]
                 rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
-        
+
         # Add this package
         rv[__package__] = {"version": __version__, "timestamp":datetime.datetime.now()}
 
