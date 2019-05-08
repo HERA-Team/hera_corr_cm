@@ -57,7 +57,7 @@ class HeraCorrCM(object):
             self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
-        self.corr = HeraCorrelator(redishost=redishost, logger=Logger, use_redis=True)
+        self.corr = HeraCorrelator(redishost=redishost, logger=logger, use_redis=True)
 
     def _get_response(self, command, timeout=10):
         """
