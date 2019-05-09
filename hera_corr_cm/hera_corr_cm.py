@@ -30,17 +30,19 @@ class HeraCorrCM(object):
     redis_connections = {}
     response_channels = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER):
+    def __init__(self, redishost="redishost", logger=LOGGER, include_fpga=True):
         """
         Create a connection to the correlator
         via a redis server.
 
         Args:
-            redishost: The hostname of the machine
+            redishost (str): The hostname of the machine
                 on which the correlators redis server
                 is running.
-            logger: A logging instance. If not provided,
+            logger (logging.Logger): A logging instance. If not provided,
                 the class will instantiate its own.
+            include_fpga (Boolean): If True, instantiate a connection to HERA
+                F-engines.
         """
         self.logger = logger
         # If the redishost is one we've already connected to, use it again.
@@ -57,7 +59,8 @@ class HeraCorrCM(object):
             self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
-        self.corr = HeraCorrelator(redishost=redishost, logger=logger, use_redis=True)
+        if include_fpga:
+            self.corr = HeraCorrelator(redishost=redishost, logger=logger, use_redis=True)
 
     def _get_response(self, command, timeout=10):
         """

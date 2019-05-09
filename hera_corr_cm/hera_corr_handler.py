@@ -9,7 +9,9 @@ import helpers
 from hera_corr_cm import HeraCorrCM
 
 CATCHER_HOST = "hera-sn1"
-FILE_TIME_MS = 200000
+X_HOSTS = ["px%d" % i for i in range(1,17)]
+X_PIPES = 2
+DEFAULT_FILE_TIME_MS = 200000
 
 class HeraCorrHandler(object):
     def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
@@ -17,7 +19,7 @@ class HeraCorrHandler(object):
         self.redishost = redishost
         self.testmode = testmode
 
-        self.cm = HeraCorrCM(redishost=self.redishost)
+        self.cm = HeraCorrCM(redishost=self.redishost, include_fpga=False)
         self.r = redis.Redis(self.redishost)
         self.cmd_chan = self.r.pubsub()
         self.cmd_chan.subscribe("corr:message")
@@ -42,18 +44,46 @@ class HeraCorrHandler(object):
             tag: human-friendly string with which to tag data
         """
         self._stop_capture()
-        time.sleep(20)
         self.logger.info("Starting correlator")
         proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
         proc.wait()
-        nfiles = int((1000. * duration) / FILE_TIME_MS)
-        self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, FILE_TIME_MS))
-        proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % FILE_TIME_MS, "-n", "%d" % nfiles, "-t", tag, CATCHER_HOST])
+        # If the duration is less than the default file time, take one file of length duration.
+        # Else take files of default size, rounding down the total number of files.
+        if (1000 * duration) < DEFAULT_FILE_TIME_MS:
+            file_time_ms = 1000 * duration
+            nfiles = 1
+        else:
+            file_time_ms = DEFAULT_FILE_TIME_MS
+            nfiles = int((1000. * duration) / DEFAULT_FILE_TIME_MS)
+        self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, file_time_ms))
+        proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % file_time_ms, "-n", "%d" % nfiles, "--tag", tag, CATCHER_HOST])
     
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
+        proc = Popen(["hera_catcher_stop_data.py", CATCHER_HOST])
+        proc.wait()
+        stop_time = time.time()
+        TIMEOUT = 30
+        self.logger.info("Waiting for catcher to stop")
+        while(time.time() - stop_time) < TIMEOUT:
+            recording, update_time =  self.cm.is_recording()
+            if not recording:
+                self.logger.info("Correlator is not recording")
+                break
         proc = Popen(["hera_ctl.py", "stop"])
         proc.wait()
+        self.logger.info("Waiting for correlator to stop")
+        stop_time = time.time()
+        TIMEOUT = 30
+        while(time.time() - stop_time) < TIMEOUT:
+            still_running = False
+            for host in X_HOSTS:
+                for pipe in range(X_PIPES):
+                    still_running = still_running and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "on"
+            time.sleep(1)
+            if not still_running:
+                self.logger.info("X-Engines have stopped")
+                break
     
     def _cmd_handler(self, message):
         d = json.loads(message)
@@ -62,12 +92,12 @@ class HeraCorrHandler(object):
         args = d["args"]
         self.logger.info("Got command: %s" % command)
         self.logger.info("       args: %s" % args)
-        if self.testmode:
-            return
         if command == "record":
-            self._start_capture(args["starttime"], args["duration"], args["acclen"], args["tag"])
+            if not self.testmode:
+                self._start_capture(args["starttime"], args["duration"], args["acclen"], args["tag"])
             starttime = float(self.r["corr:trig_time"]) * 1000 #Send in ms
             self._send_response(command, time, starttime=starttime)
         elif command == "stop":
-            self._stop_capture()
+            if not self.testmode:
+                self._stop_capture()
             self._send_response(command, time)
