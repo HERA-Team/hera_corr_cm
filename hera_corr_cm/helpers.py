@@ -1,6 +1,7 @@
 import logging
 import logging.handlers
 import sys
+import time
 import redis
 import json
 
@@ -29,7 +30,28 @@ class RedisHandler(logging.Handler):
         except redis.RedisError:
             pass
 
-def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=logging.INFO):
+class HeraMCHandler(logging.Handler):
+    def __init__(self, subsystem, *args, **kwargs):
+        from hera_mc import mc
+        from astropy.time import Time
+        self.Time = Time
+        logging.Handler.__init__(self, *args, **kwargs)
+        self.subsystem = subsystem
+        parser = mc.get_mc_argument_parser()
+        args = parser.parse_args()
+        db = mc.connect_to_mc_db(args)
+        self.session = db.sessionmaker()
+
+    def emit(self, record):
+        # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10
+        severity = max(1, 100 / record.levelno)
+        message = self.format(record)
+        logtime = self.Time(time.time(), format="unix")
+        self.session.add_subsystem_error(logtime, self.subsystem, severity, message)
+            
+            
+    
+def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=logging.INFO, include_mc=True, mc_level=logging.WARNING):
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
@@ -44,6 +66,15 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     syslog_handler.setLevel(bglevel)
     syslog_handler.setFormatter(formatter)
     logger.addHandler(syslog_handler)
+
+    if include_mc:
+        try:
+            mc_handler = HeraMCHandler("correlator")
+            mc_handler.setLevel(mc_level)
+            mc_handler.setFormatter(formatter)
+            logger.addHandler(mc_handler)
+        except:
+            logger.warn("Failed to add HERA MC log handler")
 
     redis_host = redis.Redis(redishostname, socket_timeout=1)
     try:
