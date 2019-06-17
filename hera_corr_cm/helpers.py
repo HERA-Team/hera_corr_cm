@@ -3,11 +3,17 @@ import logging.handlers
 import sys
 import redis
 import json
+import socket
 
 '''
 A Redis-based log handler from:
 http://charlesleifer.com/blog/using-redis-pub-sub-and-irc-for-error-logging-with-python/
 '''
+
+logger = logging.getLogger(__name__)
+NOTIFY = logging.INFO + 1
+logging.addLevelName(NOTIFY, "NOTIFY")
+
 class RedisHandler(logging.Handler):
     def __init__(self, channel, conn, *args, **kwargs):
         logging.Handler.__init__(self, *args, **kwargs)
@@ -29,7 +35,11 @@ class RedisHandler(logging.Handler):
         except redis.RedisError:
             pass
 
-def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=logging.INFO):
+def log_notify(log, message=None):
+    msg = message or "%s starting on %s" % (log.name, socket.gethostname())
+    log.log(NOTIFY, msg)
+
+def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=NOTIFY):
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
