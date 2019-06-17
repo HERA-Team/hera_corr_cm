@@ -9,6 +9,9 @@ import helpers
 from hera_corr_cm import HeraCorrCM
 
 CATCHER_HOST = "hera-sn1"
+SNAP_HOST = "hera-snap-head"
+SNAP_USER = "hera"
+SNAP_ENVIRONMENT = "~/.venv/bin/activate"
 X_HOSTS = ["px%d" % i for i in range(1,17)]
 X_PIPES = 2
 DEFAULT_FILE_TIME_MS = 200000
@@ -58,6 +61,32 @@ class HeraCorrHandler(object):
         self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, file_time_ms))
         proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % file_time_ms, "-n", "%d" % nfiles, "--tag", tag, CATCHER_HOST])
     
+    def _xtor_down(self):
+        self.logger.info("Issuing xtor_down.sh")
+        proc1 = Popen(["xtor_down.sh"])
+        self.logger.info("Issuing hera_catcher_down.sh")
+        proc2 = Popen(["hera_catcher_down.sh"])
+        proc1.wait()
+        proc2.wait()
+
+    def _xtor_up(self, input_power_target=-13.0, output_rms_target=2.5):
+        self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
+        proc1 = Popen(["xtor_up.py", "--runtweak"] + X_HOSTS)
+        self.logger.info("Issuing hera_catcher_up.py")
+        proc2 = Popen(["hera_catcher_up.py", CATCHER_HOST])
+        self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
+        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i"])
+        proc3.wait()
+        self.logger.info("Issuing input balance with target %f" % input_power_target)
+        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
+        proc3.wait()
+        self.logger.info("Issuing output balance with target %f" % output_rms_target)
+        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
+        proc3.wait()
+        proc1.wait()
+        proc2.wait()
+
+
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
         proc = Popen(["hera_catcher_stop_data.py", CATCHER_HOST])
@@ -100,4 +129,12 @@ class HeraCorrHandler(object):
         elif command == "stop":
             if not self.testmode:
                 self._stop_capture()
+            self._send_response(command, time)
+        elif command == "hard_stop":
+            if not self.testmode:
+                self._xtor_down()
+            self._send_response(command, time)
+        elif command == "start":
+            if not self.testmode:
+                self._xtor_up()
             self._send_response(command, time)

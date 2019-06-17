@@ -317,6 +317,42 @@ class HeraCorrCM(object):
         Restart (power cycle) the correlator, returning it to the settings
         in the current configuration. Will reset ADC delay calibrations.
         """
+        self._stop()
+        self._start()
+
+    def _stop(self):
+        """
+        Stop the X-Engines and data catcher.
+        """
+        self.logger.info("Issuing Hard Stop command")
+        # Try and be gracious
+        self.stop_taking_data()
+        is_recording, is_recording_time = self.is_recording() # This is a stupid definition.
+        if is_recording:
+            self.logger.warning("Data taking failed to end gracefully")
+
+        # Whether or not data taking stopped, hard stop everything
+        sent_message = self._send_message("hard_stop")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message, timeout=120)
+        if response is None:
+            return ERROR
+        return OK
+
+    def _start(self):
+        """
+        Start the X-Engines and data catcher.
+        """
+        self.logger.info("Issuing Hard Start command")
+        sent_message = self._send_message("start")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message, timeout=300)
+        if response is None:
+            return ERROR
+        return OK
+
 
     def noise_diode_enable(self):
         """
