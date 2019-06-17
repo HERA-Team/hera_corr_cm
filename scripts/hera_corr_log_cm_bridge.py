@@ -37,7 +37,7 @@ while(True):
             logtime = self.Time(time.time(), format="unix")
             # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10
             severity = max(1, 100 / decoded['levelno'])
-            session.add_subsystem_error(logtime, subsystem, severity, msg, testing=True)
+            session.add_subsystem_error(logtime, subsystem, severity, msg, testing=False)
     except KeyboardInterrupt:
         r.set(script_redis_key, "killed by KeyboardInterrupt")
         exit()
