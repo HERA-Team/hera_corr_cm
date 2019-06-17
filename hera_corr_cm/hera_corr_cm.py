@@ -316,9 +316,14 @@ class HeraCorrCM(object):
         """
         Restart (power cycle) the correlator, returning it to the settings
         in the current configuration. Will reset ADC delay calibrations.
+        Returns OK or ERROR
         """
-        self._stop()
-        self._start()
+        stop_stat = self._stop()
+        start_stat = self._start()
+        if (stop_stat == OK) and (start_stat == OK):
+            return OK
+        else:
+            return ERROR
 
     def _stop(self):
         """
