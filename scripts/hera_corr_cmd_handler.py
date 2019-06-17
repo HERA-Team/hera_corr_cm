@@ -13,6 +13,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     handler = HeraCorrHandler(redishost=args.redishost, testmode=args.testmode)
+
+    script_redis_key = "status:script:%s" % __file__
     
     while(True):
+        # Set an expiring redis key so we know if this script dies
+        handler.r.set(script_redis_key, "alive", ex=30)
         handler.process_command()
