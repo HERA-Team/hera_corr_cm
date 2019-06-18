@@ -38,7 +38,7 @@ def main():
             # a dictionary with at least the entries
             # "formatted" : The log message string
             # "levelno"   : The python logging spec log level
-            mesg = json.dumps({"formatted":"%s:%s:%s" % (args.level, myhost, line), "levelno": level})
+            mesg = json.dumps({"formatted":"%s:%s: %s" % (args.level, myhost, line), "levelno": level})
             r.publish(args.channel, mesg)
 
 if __name__ == "__main__":
