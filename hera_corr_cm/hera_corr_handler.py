@@ -71,7 +71,7 @@ class HeraCorrHandler(object):
 
     def _xtor_up(self, input_power_target=-13.0, output_rms_target=2.5):
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
-        proc1 = Popen(["xtor_up.py", "--runtweak"] + X_HOSTS)
+        proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
         self.logger.info("Issuing hera_catcher_up.py")
         proc2 = Popen(["hera_catcher_up.py", CATCHER_HOST])
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
