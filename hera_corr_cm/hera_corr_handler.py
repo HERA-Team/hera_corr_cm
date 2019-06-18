@@ -60,6 +60,7 @@ class HeraCorrHandler(object):
             nfiles = int((1000. * duration) / DEFAULT_FILE_TIME_MS)
         self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, file_time_ms))
         proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % file_time_ms, "-n", "%d" % nfiles, "--tag", tag, CATCHER_HOST])
+        proc.wait()
     
     def _xtor_down(self):
         self.logger.info("Issuing xtor_down.sh")
