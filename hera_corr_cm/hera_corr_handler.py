@@ -73,7 +73,7 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
         proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
         self.logger.info("Issuing hera_catcher_up.py")
-        proc2 = Popen(["hera_catcher_up.py", CATCHER_HOST])
+        proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
         proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i"])
         proc3.wait()
