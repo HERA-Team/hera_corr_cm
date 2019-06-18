@@ -56,6 +56,6 @@ while(True):
             except:
                 pass
     except KeyboardInterrupt:
-        r.set(script_redis_key, "killed by KeyboardInterrupt")
+        r.set(script_redis_key, "killed by KeyboardInterrupt", timeout=600)
         exit()
 
