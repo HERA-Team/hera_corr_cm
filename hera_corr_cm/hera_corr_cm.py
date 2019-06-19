@@ -235,7 +235,7 @@ class HeraCorrCM(object):
         sent_message = self._send_message("stop")
         if sent_message is None:
             return ERROR
-        response = self._get_response(sent_message)
+        response = self._get_response(sent_message, timeout=40)
         if response is None:
             return ERROR
         return OK
