@@ -36,7 +36,37 @@ class HeraCorrHandler(object):
     def _send_response(self, command, time, **kwargs):
         message_dict = {"command":command, "time":time, "args":kwargs}
         n = self.r.publish("corr:response", json.dumps(message_dict))
-    
+
+    def _gpu_is_on(self):
+        """
+        Returns True if GPUSTAT is "on" for the all nodes
+        """
+        on = True
+        for host in X_HOSTS:
+            for pipe in range(X_PIPES):
+                on = on and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "on"
+        return on
+
+    def _gpu_is_off(self):
+        """
+        Returns True if GPUSTAT is "off" for the all nodes
+        """
+        off = True
+        for host in X_HOSTS:
+            for pipe in range(X_PIPES):
+                off = off and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "off"
+        return off
+
+    def _outthread_is_blocked(self):
+        """
+        Returns True if OUTSTAT is "blocked" for the all nodes
+        """
+        blocked = True
+        for host in X_HOSTS:
+            for pipe in range(X_PIPES):
+                blocked = blocked and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "OUTSTAT") == "blocked"
+        return blocked
+
     def _start_capture(self, starttime, duration, acclen, tag):
         """
         Start data capture. First issues a stop, and waits 20 seconds.
@@ -100,20 +130,26 @@ class HeraCorrHandler(object):
             if not recording:
                 self.logger.info("Correlator is not recording")
                 break
+        # If X engines are already stopped do nothing
+        if self._gpu_is_off():
+            time.sleep(1)
+            if self._outthread_is_blocked():
+                return
         proc = Popen(["hera_ctl.py", "stop"])
         proc.wait()
         self.logger.info("Waiting for correlator to stop")
         stop_time = time.time()
         TIMEOUT = 30
         while(time.time() - stop_time) < TIMEOUT:
-            still_running = False
-            for host in X_HOSTS:
-                for pipe in range(X_PIPES):
-                    still_running = still_running and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "on"
-            time.sleep(1)
-            if not still_running:
-                self.logger.info("X-Engines have stopped")
+            if self._gpu_is_off():
                 break
+            time.sleep(1)
+        time.sleep(1)
+        while(time.time() - stop_time) < TIMEOUT:
+            if self._outthread_is_blocked():
+                self.logger.info("X-Engines have stopped")
+                return
+        self.logger.warning("X-Engines failed to stop in %d seconds" % TIMEOUT)
     
     def _cmd_handler(self, message):
         d = json.loads(message)
