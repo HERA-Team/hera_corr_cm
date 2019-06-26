@@ -479,7 +479,15 @@ class HeraCorrCM(object):
             host_ant_id (int) : The SNAP ADC channel number (0-7) to which this antenna is connected
             pam_atten (int)   : PAM attenuation setting for this antenna (dB)
             pam_power (float) : PAM power sensor reading for this antenna (dBm)
+            pam_voltage (float)   : PAM voltage sensor reading for this antenna (V)
+            pam_current (float)   : PAM current sensor reading for this antenna (A)
+            pam_id (list of ints) : Bytewise serial number of this PAM
+            fem_voltage (float)   : FEM voltage sensor reading for this antenna (V)
+            fem_current (float)   : FEM current sensor reading for this antenna (A)
+            fem_id (list)         : Bytewise serial number of this FEM
+            fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
+            histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
             Unknown values return the string "None"
@@ -493,7 +501,16 @@ class HeraCorrCM(object):
             'host_ant_id' : int,
             'pam_atten'   : int,
             'pam_power'   : float,
+            'pam_voltage' : float,
+            'pam_current' : float,
+            'pam_id'      : json.loads,
+            'fem_temp'    : float,
+            'fem_voltage' : float,
+            'fem_current' : float,
+            'fem_id'      : json.loads,
+            'fem_switch'  : str,
             'eq_coeffs'   : json.loads,
+            'histogram'   : json.loads,
             'timestamp'   : dateutil.parser.parse,
         }
         rv = {}
