@@ -15,6 +15,8 @@ logger = logging.getLogger(__name__)
 NOTIFY = logging.INFO + 1
 logging.addLevelName(NOTIFY, "NOTIFY")
 
+IS_INITIALIZED_ATTR = "_hera_has_default_handlers"
+
 class RedisHandler(logging.Handler):
     def __init__(self, channel, conn, *args, **kwargs):
         logging.Handler.__init__(self, *args, **kwargs)
