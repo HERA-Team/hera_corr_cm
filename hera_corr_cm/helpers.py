@@ -58,6 +58,10 @@ class HeraMCHandler(logging.Handler):
             
     
 def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=NOTIFY, include_mc=False, mc_level=logging.WARNING):
+    if getattr(logger, IS_INITIALIZED_ATTR, False):
+        return logger
+    setattr(logger, IS_INITIALIZED_ATTR, True)
+
     logger.setLevel(logging.DEBUG)
     logger.propagate = False
 
