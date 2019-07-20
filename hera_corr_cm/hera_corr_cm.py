@@ -30,7 +30,7 @@ class HeraCorrCM(object):
     redis_connections = {}
     response_channels = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER, include_fpga=True):
+    def __init__(self, redishost="redishost", logger=LOGGER, include_fpga=False):
         """
         Create a connection to the correlator
         via a redis server.
