@@ -310,7 +310,7 @@ class HeraCorrCM(object):
         config      = self.r.hget("snap_configuration", "config")
         config_time = self.r.hget("snap_configuration", "upload_time")
         md5         = self.r.hget("snap_configuration", "md5")
-        return float(config_time), yaml.load(config), md5
+        return float(config_time), yaml.load(config, Loader=yaml.FullLoader), md5
 
     def restart(self):
         """
