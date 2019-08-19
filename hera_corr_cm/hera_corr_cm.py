@@ -569,7 +569,7 @@ class HeraCorrCM(object):
         rv["snap"] = {}
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]
-        rv["snap"]["config"] = yaml.load(snap_init["config"])
+        rv["snap"]["config"] = yaml.load(snap_init["config"], Loader=yaml.FullLoader)
         rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))
         rv["snap"]["config_md5"] = snap_init["md5"]
         rv["snap"]["timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["init_time"]))
