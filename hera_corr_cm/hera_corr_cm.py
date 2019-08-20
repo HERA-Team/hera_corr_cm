@@ -488,6 +488,7 @@ class HeraCorrCM(object):
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
             histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
+            autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
             Unknown values return the string "None"
@@ -511,6 +512,7 @@ class HeraCorrCM(object):
             'fem_switch'  : str,
             'eq_coeffs'   : json.loads,
             'histogram'   : json.loads,
+            'autocorrelation' : json.loads,
             'timestamp'   : dateutil.parser.parse,
         }
         rv = {}
