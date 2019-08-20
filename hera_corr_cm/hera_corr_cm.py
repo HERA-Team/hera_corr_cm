@@ -201,7 +201,7 @@ class HeraCorrCM(object):
             tag (string or None): Tag which will end up in data files as a header
                 entry.
 
-        Returns: Unix time at which the correlator has been
+        Returns: Unix time (in ms) at which the correlator has been
             instructed to start recording.
         """
         recording, recording_time = self.is_recording()
