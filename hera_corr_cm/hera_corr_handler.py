@@ -93,12 +93,12 @@ class HeraCorrHandler(object):
         proc.wait()
     
     def _xtor_down(self):
-        self.logger.info("Issuing xtor_down.sh")
-        proc1 = Popen(["xtor_down.sh"])
         self.logger.info("Issuing hera_catcher_down.sh")
         proc2 = Popen(["hera_catcher_down.sh"])
-        proc1.wait()
         proc2.wait()
+        self.logger.info("Issuing xtor_down.sh")
+        proc1 = Popen(["xtor_down.sh"])
+        proc1.wait()
 
     def _xtor_up(self, input_power_target=-13.0, output_rms_target=2.5):
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
