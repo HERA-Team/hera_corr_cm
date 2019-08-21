@@ -359,37 +359,55 @@ class HeraCorrCM(object):
         return OK
 
 
-    def noise_diode_enable(self):
+    def noise_diode_enable(self, ant=None):
         """
-        Enables noise diodes on all antennas. Blocked if the correlator
-        is recording.
+        Enable FEM noise diodes.
+        inputs:
+            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
         """
+        if (ant is not None) and (not isinstance(ant, int)):
+            self.logger.error("Invalid `ant` argument. Should be integer or None")
+            return ERROR
         if not self._require_not_recording():
             return ERROR
-        sent_message = self._send_message("noise_diode", activate=True)
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="noise")
         if sent_message is None:
             return ERROR
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if self.noise_diode_is_on()[0]:
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if (ant is not None) or self.noise_diode_is_on()[0]:
             return OK
         return ERROR
 
-    def noise_diode_disable(self):
+    def noise_diode_disable(self, ant=None):
         """
-        Disables noise diodes on all antennas. Blocked if the correlator
-        is recording.
+        Disable FEM noise diodes.
+        inputs:
+            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
         """
+        if (ant is not None) and (not isinstance(ant, int)):
+            self.logger.error("Invalid `ant` argument. Should be integer or None")
+            return ERROR
         if not self._require_not_recording():
             return ERROR
-        sent_message = self._send_message("noise_diode", activate=False)
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
         if sent_message is None:
             return ERROR
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if not self.noise_diode_is_on()[0]:
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if (ant is not None) or not self.noise_diode_is_on()[0]:
             return OK
         return ERROR
 
