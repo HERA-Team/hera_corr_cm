@@ -52,7 +52,7 @@ class HeraMCHandler(logging.Handler):
 
     def emit(self, record):
         # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10
-        severity = max(1, 100 / record.levelno)
+        severity = max(1, 100 // record.levelno)
         message = self.format(record)
         logtime = self.Time(time.time(), format="unix")
         self.session.add_subsystem_error(logtime, self.subsystem, severity, message)

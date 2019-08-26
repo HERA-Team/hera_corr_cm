@@ -51,7 +51,7 @@ while(True):
                 msg_level = decoded['levelno']
                 if msg_level >= level:
                     # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10
-                    severity = max(1, 100 / decoded['levelno'])
+                    severity = max(1, 100 // decoded['levelno'])
                     session.add_subsystem_error(logtime, subsystem, severity, msg, testing=False)
             except:
                 pass
