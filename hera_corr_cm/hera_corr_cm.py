@@ -5,7 +5,7 @@ import yaml
 import json
 import dateutil.parser
 import datetime
-from helpers import add_default_log_handlers
+from .helpers import add_default_log_handlers
 from . import __package__, __version__
 
 from hera_corr_f import HeraCorrelator
@@ -52,7 +52,7 @@ class HeraCorrCM(object):
         # multiple HeraCorrCM instances in the same program. But in most cases
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
-        if redishost not in self.redis_connections.keys():
+        if redishost not in list(self.redis_connections.keys()):
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
             self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
             self.response_channels[redishost].subscribe("corr:response")
@@ -443,7 +443,7 @@ class HeraCorrCM(object):
         """
         keystart = "status:%s:" % stattype
         rv = {}
-        for key in self.r.keys():
+        for key in list(self.r.keys()):
             if key.startswith(keystart):
                 rv[key.lstrip(keystart)] = self.r.hgetall(key)
         return rv
@@ -475,9 +475,9 @@ class HeraCorrCM(object):
             'timestamp' : dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
@@ -534,9 +534,9 @@ class HeraCorrCM(object):
             'timestamp'   : dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
@@ -573,7 +573,7 @@ class HeraCorrCM(object):
             "timestamp" : datetime object indicating when the initialization script was called.
         """
         rv = {}
-        for key in self.r.keys():
+        for key in list(self.r.keys()):
             if key.startswith("version:"):
                 newkey = key.lstrip("version:")
                 rv[newkey] = {}

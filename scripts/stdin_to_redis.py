@@ -24,8 +24,8 @@ def main():
 
     allowed_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
     if args.level not in allowed_levels:
-        print "Selected log level not allowed. Allowed levels are:", allowed_levels
-        print "Defaulting to WARNING"
+        print("Selected log level not allowed. Allowed levels are:", allowed_levels)
+        print("Defaulting to WARNING")
         level = logging.WARNING
     else:
         level = getattr(logging, args.level)

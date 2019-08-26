@@ -98,7 +98,7 @@ with open("/var/www/html/nodes.html", "w") as fh:
   for k in sorted(r.keys()):
     if k.startswith("status:"):
       stattype = k.split(":")[1]
-      if stattype not in cols.keys():
+      if stattype not in list(cols.keys()):
           continue
       if current_col != cols[stattype]:
           if current_col != 0:
@@ -107,7 +107,7 @@ with open("/var/www/html/nodes.html", "w") as fh:
           current_col = cols[stattype]
       fh.write("    <h2>%s</h2>\n" % k)
       x = r.hgetall(k)
-      for key, val in sorted(x.iteritems()):
+      for key, val in sorted(x.items()):
         if key.startswith('histogram'):
             continue
         if key.startswith("eq"):

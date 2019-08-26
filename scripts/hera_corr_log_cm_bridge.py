@@ -18,15 +18,15 @@ parser.add_argument('-l', dest='level', type=str, default="NOTIFY",
 args = parser.parse_args()
 
 if args.level not in allowed_levels:
-    print "Selected log level not allowed. Allowed levels are:", allowed_levels
-    print "Defaulting to WARNING"
+    print("Selected log level not allowed. Allowed levels are:", allowed_levels)
+    print("Defaulting to WARNING")
     level = logging.WARNING
 else:
     level = logging.getLevelName(args.level)
 
 logger = helpers.add_default_log_handlers(logging.getLogger(__file__))
 
-print('Connecting to redis server %s' % args.redishost)
+print(('Connecting to redis server %s' % args.redishost))
 r = redis.Redis(args.redishost)
 script_redis_key = "status:script:%s" % __file__
 ps = r.pubsub()

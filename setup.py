@@ -10,7 +10,7 @@ try:
     ver = VERSION + '-' + subprocess.check_output(['git', 'describe', '--abbrev=8', '--always', '--dirty', '--tags']).strip()
 except:
     ver = VERSION
-    print('Couldn\'t get version from git. Defaulting to %s' % ver)
+    print(('Couldn\'t get version from git. Defaulting to %s' % ver))
 
 # Generate a __version__.py file with this version in it
 here = os.path.abspath(os.path.dirname(__file__))
@@ -18,7 +18,7 @@ with open(os.path.join(here, 'hera_corr_cm', '__version__.py'), 'w') as fh:
     fh.write('__version__ = "%s"' % ver)
 
 PACKAGES = find_packages()
-print PACKAGES
+print(PACKAGES)
 REQUIRES = ["redis", "pyaml"]
 
 setup_args = dict(name="hera_corr",
@@ -33,9 +33,9 @@ setup_args = dict(name="hera_corr",
 if __name__ == '__main__':
     setup(**setup_args)
     if ver.endswith("dirty"):
-        print "********************************************"
-        print "* You are installing from a dirty git repo *"
-        print "*      One day you will regret this.       *"
-        print "*                                          *"
-        print "*  Consider cleaning up and reinstalling.  *"
-        print "********************************************"
+        print("********************************************")
+        print("* You are installing from a dirty git repo *")
+        print("*      One day you will regret this.       *")
+        print("*                                          *")
+        print("*  Consider cleaning up and reinstalling.  *")
+        print("********************************************")

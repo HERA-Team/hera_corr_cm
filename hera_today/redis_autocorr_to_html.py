@@ -69,7 +69,7 @@ with open('/var/www/html/powers.html', 'w') as fh:
   # Get time of plot
   t_plot_jd = np.fromstring(r['auto:timestamp'], dtype=np.float64)[0]
   t_plot_unix = Time(t_plot_jd, format='jd').unix
-  print t_plot_jd, t_plot_unix
+  print(t_plot_jd, t_plot_unix)
   got_time = True
   # grab data from redis and format it according to plotly's javascript api
   for i in range(n_ants):
@@ -104,4 +104,4 @@ with open('/var/www/html/powers.html', 'w') as fh:
   #fh.write('<p>CMINFO source: %s</p>\n' % r['cminfo_source'])
   fh.write(html_postamble)
 
-print 'Got %d signals' % n_signals
+print('Got %d signals' % n_signals)

@@ -5,8 +5,8 @@ import json
 import logging
 
 from subprocess import Popen, PIPE
-import helpers
-from hera_corr_cm import HeraCorrCM
+from . import helpers
+from .hera_corr_cm import HeraCorrCM
 
 CATCHER_HOST = "hera-sn1"
 SNAP_HOST = "hera-snap-head"
