@@ -543,6 +543,36 @@ class HeraCorrCM(object):
                     rv[host][key] = "None"
         return rv
 
+    def get_snaprf_status(self):
+        """
+        Returns a dictionary of SNAP input stats. Keys of returned dictionaries are
+        of the form "<SNAP hostname>:"<SNAP input number>". Values of this dictionary are status key/val pairs.
+
+        These keys are:
+            eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
+            histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
+            autocorrelation (list of floats) : Autocorrelation spectrum
+            timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
+
+            Unknown values return the string "None"
+        """
+        stats = self._get_status_keys("snaprf")
+        conv_methods = {
+            'eq_coeffs'   : json.loads,
+            'histogram'   : json.loads,
+            'autocorrelation' : json.loads,
+            'timestamp'   : dateutil.parser.parse,
+        }
+        rv = {}
+        for host, val in stats.iteritems():
+            rv[host] = {}
+            for key, convfunc in conv_methods.iteritems():
+                try:
+                    rv[host][key] = convfunc(stats[host][key])
+                except:
+                    rv[host][key] = "None"
+        return rv
+
     def get_x_status(self):
         """
         Returns a dictionary of X-engine status flags.
