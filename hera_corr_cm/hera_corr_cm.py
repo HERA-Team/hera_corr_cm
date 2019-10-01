@@ -8,8 +8,6 @@ import datetime
 from .helpers import add_default_log_handlers
 from . import __package__, __version__
 
-from hera_corr_f import HeraCorrelator
-
 OK = True
 ERROR = False
 
@@ -30,7 +28,7 @@ class HeraCorrCM(object):
     redis_connections = {}
     response_channels = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER, include_fpga=False):
+    def __init__(self, redishost="redishost", logger=LOGGER):
         """
         Create a connection to the correlator
         via a redis server.
@@ -41,8 +39,6 @@ class HeraCorrCM(object):
                 is running.
             logger (logging.Logger): A logging instance. If not provided,
                 the class will instantiate its own.
-            include_fpga (Boolean): If True, instantiate a connection to HERA
-                F-engines.
         """
         self.logger = logger
         # If the redishost is one we've already connected to, use it again.
@@ -59,8 +55,6 @@ class HeraCorrCM(object):
             self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
-        if include_fpga:
-            self.corr = HeraCorrelator(redishost=redishost, logger=logger, use_redis=True)
 
     def _get_response(self, command, timeout=10):
         """
@@ -129,7 +123,7 @@ class HeraCorrCM(object):
         if not self.r.exists("corr:is_taking_data"):
             return False, None
         else:
-            x = self.r.hgetall("corr:is_taking_data")
+            x = self._hgetall("corr:is_taking_data")
             return x["state"] == "True", float(x["time"])
 
     def _conv_float(self, v):
@@ -282,7 +276,7 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if phase switching is on. Else False.
         """
-        x = self.r.hgetall("corr:status_phase_switch")
+        x = self._hgetall("corr:status_phase_switch")
         return x["state"] == "on", float(x["time"])
 
 
@@ -416,7 +410,7 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if noise diode is on. Else False.
         """
-        x = self.r.hgetall("corr:status_noise_diode")
+        x = self._hgetall("corr:status_noise_diode")
         return x["state"] == "on", float(x["time"])
 
     def get_bit_stats(self):
@@ -443,10 +437,16 @@ class HeraCorrCM(object):
         """
         keystart = "status:%s:" % stattype
         rv = {}
-        for key in list(self.r.keys()):
-            if key.startswith(keystart):
-                rv[key.lstrip(keystart)] = self.r.hgetall(key)
+        for key in self.r.scan_iter(keystart+"*"):
+            rv[key.decode().lstrip(keystart)] = self._hgetall(key)
         return rv
+
+    def _hgetall(self, rkey):
+        """
+        A wrapper around self.r.hgetall(rkey) which converts (.decode()'s)
+        the keys and values of the resulting byte array to a string.
+        """
+        return {key.decode(): val.decode() for key, val in self.r.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -603,19 +603,18 @@ class HeraCorrCM(object):
             "timestamp" : datetime object indicating when the initialization script was called.
         """
         rv = {}
-        for key in list(self.r.keys()):
-            if key.startswith("version:"):
-                newkey = key.lstrip("version:")
-                rv[newkey] = {}
-                x = self.r.hgetall(key)
-                rv[newkey]["version"] = x["version"]
-                rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
+        for key in self.r.scan_iter("version:*"):
+            newkey = key.decode().lstrip("version:")
+            rv[newkey] = {}
+            x = self._hgetall(key)
+            rv[newkey]["version"] = x["version"]
+            rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
 
         # Add this package
         rv[__package__] = {"version": __version__, "timestamp":datetime.datetime.now()}
 
         # SNAP init is a special case
-        snap_init = self.r.hgetall("init_configuration")
+        snap_init = self._hgetall("init_configuration")
         rv["snap"] = {}
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]
