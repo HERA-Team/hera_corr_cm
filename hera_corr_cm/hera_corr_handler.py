@@ -106,7 +106,7 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing hera_catcher_up.py")
         proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
-        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i"])
+        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i", "--noredistapcp"])
         proc3.wait()
         self.logger.info("Issuing input balance with target %f" % input_power_target)
         proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
