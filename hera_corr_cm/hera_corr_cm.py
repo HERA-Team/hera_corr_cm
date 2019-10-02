@@ -596,6 +596,7 @@ class HeraCorrCM(object):
             fem_voltage (float)   : FEM voltage sensor reading for this antenna (V)
             fem_current (float)   : FEM current sensor reading for this antenna (A)
             fem_id (list)         : Bytewise serial number of this FEM
+            fem_switch(str)       : Switch state for this FEM ('antenna', 'load', or 'noise')
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
             histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
