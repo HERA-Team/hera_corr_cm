@@ -31,7 +31,7 @@ class HeraCorrCM(object):
     redis_connections = {}
     response_channels = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER, include_fpga=False):
+    def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
         """
         Create a connection to the correlator
         via a redis server.
@@ -44,8 +44,10 @@ class HeraCorrCM(object):
                 the class will instantiate its own.
             include_fpga (Boolean): If True, instantiate a connection to HERA
                 F-engines.
+            danger_mode (Boolean): If True, disables the only-allow-command-when-not-observing checks.
         """
         self.logger = logger
+        self.danger_mode = danger_mode
         # If the redishost is one we've already connected to, use it again.
         # Otherwise, add it.
         # Also share response channels. This opens the door to all sorts of
@@ -165,8 +167,12 @@ class HeraCorrCM(object):
     def _require_not_recording(self):
         recording, recording_time = self.is_recording()
         if recording:
-            self.logger.error("Correlator is recording!")
-            return False
+            if self.danger_mode:
+                self.logger.warning("Corelator is recording, but command blocks disabled!")
+                return True
+            else:
+                self.logger.error("Correlator is recording!")
+                return False
         else:
             return True
 
