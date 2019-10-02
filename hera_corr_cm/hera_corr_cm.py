@@ -450,6 +450,7 @@ class HeraCorrCM(object):
             pol (string): Polarization to query (must be 'e' or 'n')
         returns:
             time (UNIX timestamp float), coefficients (numpy array of floats)
+            or ERROR, in the case of a failure
         """
         try:
             v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:%d:%s' % (ant, pol)).items()}
@@ -467,6 +468,49 @@ class HeraCorrCM(object):
             self.logger.error("Failed to cast EQ coefficients to numpy float array")
             return ERROR
         return t, coeffs
+
+    def get_pam_atten(self, ant, pol):
+        """
+        Get the currently loaded pam attenuation value for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+        returns:
+            ERROR, or attenuation value in dB (integer)
+        """
+        sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="r")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if "val" not in response:
+            return ERROR
+        return response["val"]
+
+    def set_pam_atten(self, ant, pol, atten):
+        """
+        Get the currently loaded pam attenuation value for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+            atten (integer): Attenuation value in dB
+        returns:
+            OK or ERROR
+        """
+        sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="w", val=atten)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        return OK
 
     def get_bit_stats(self):
         """
