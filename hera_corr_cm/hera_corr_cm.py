@@ -5,6 +5,7 @@ import yaml
 import json
 import dateutil.parser
 import datetime
+import numpy as np
 from helpers import add_default_log_handlers
 from . import __package__, __version__
 
@@ -418,6 +419,54 @@ class HeraCorrCM(object):
         """
         x = self.r.hgetall("corr:status_noise_diode")
         return x["state"] == "on", float(x["time"])
+
+    def set_eq_coeffs(self, ant, pol, coeffs):
+        """
+        Set the gain coefficients for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+            coeffs (numpy.array): Coefficients to load.
+        returns:
+            ERROR or OK
+        """
+        coeffs_list = coeffs.tolist()
+        sent_message = self._send_message("snap_eq", ant=ant, pol=pol, coeffs=coeffs_list)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        return OK
+    
+    def get_eq_coeffs(self, ant, pol):
+        """
+        Get the currently loaded gain coefficients for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+        returns:
+            time (UNIX timestamp float), coefficients (numpy array of floats)
+        """
+        try:
+            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:%d:%s' % (ant, pol)).items()}
+        except KeyError:
+            self.logger.error("Failed to get antenna coefficients from redis. Does this antenna exist?")
+            return ERROR
+        try:
+            t = float(v['time'])
+        except:
+            self.logger.error("Failed to cast EQ coefficient upload time to float")
+            return ERROR
+        try:
+            coeffs = np.array(json.loads(v['values']), dtype=np.float)
+        except:
+            self.logger.error("Failed to cast EQ coefficients to numpy float array")
+            return ERROR
+        return t, coeffs
 
     def get_bit_stats(self):
         """
