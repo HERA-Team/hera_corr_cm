@@ -365,6 +365,31 @@ class HeraCorrCM(object):
             return ERROR
         return OK
 
+    def antenna_enable(self, ant=None):
+        """
+        Enables antenna state. Used to turn off noise diode and load.
+        inputs:
+            ant (integer): HERA antenna number to switch to antenna. Set to None for all antennas.
+        returns:
+            ERROR or OK
+        """
+        if (ant is not None) and (not isinstance(ant, int)):
+            self.logger.error("Invalid `ant` argument. Should be integer or None")
+            return ERROR
+        if not self._require_not_recording():
+            return ERROR
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if (ant is not None) or (not self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
+            return OK
+        return ERROR
 
     def noise_diode_enable(self, ant=None):
         """
@@ -388,7 +413,7 @@ class HeraCorrCM(object):
         if "err" in response:
             self.logger.error(response["err"])
             return ERROR
-        if (ant is not None) or self.noise_diode_is_on()[0]:
+        if (ant is not None) or (self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
             return OK
         return ERROR
 
@@ -400,12 +425,22 @@ class HeraCorrCM(object):
         returns:
             ERROR or OK
         """
+        self.enable_antenna(ant=ant)
+
+    def load_enable(self, ant=None):
+        """
+        Enable FEM load terminator.
+        inputs:
+            ant (integer): HERA antenna number to switch to load. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
+        """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
             return ERROR
         if not self._require_not_recording():
             return ERROR
-        sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="load")
         if sent_message is None:
             return ERROR
         response = self._get_response(sent_message)
@@ -414,9 +449,19 @@ class HeraCorrCM(object):
         if "err" in response:
             self.logger.error(response["err"])
             return ERROR
-        if (ant is not None) or not self.noise_diode_is_on()[0]:
+        if (ant is not None) or (self.load_is_on()[0] and not self.noise_diode_is_on()[0]):
             return OK
         return ERROR
+
+    def load_disable(self, ant=None):
+        """
+        Disable FEM load terminator.
+        inputs:
+            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
+        """
+        self.enable_antenna(ant=ant)
 
     def noise_diode_is_on(self):
         """
@@ -424,6 +469,14 @@ class HeraCorrCM(object):
         enable_state is True if noise diode is on. Else False.
         """
         x = self.r.hgetall("corr:status_noise_diode")
+        return x["state"] == "on", float(x["time"])
+
+    def load_is_on(self):
+        """
+        Returns: enable_state, UNIX timestamp (float) of last state change
+        enable_state is True if load is on. Else False.
+        """
+        x = self.r.hgetall("corr:status_load")
         return x["state"] == "on", float(x["time"])
 
     def set_eq_coeffs(self, ant, pol, coeffs):
@@ -447,7 +500,7 @@ class HeraCorrCM(object):
             self.logger.error(response["err"])
             return ERROR
         return OK
-    
+
     def get_eq_coeffs(self, ant, pol):
         """
         Get the currently loaded gain coefficients for a given feed.
