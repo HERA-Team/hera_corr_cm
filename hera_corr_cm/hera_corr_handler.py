@@ -100,7 +100,7 @@ class HeraCorrHandler(object):
         proc1 = Popen(["xtor_down.sh"])
         proc1.wait()
 
-    def _xtor_up(self, input_power_target=-13.0, output_rms_target=2.5):
+    def _xtor_up(self, input_power_target=None, output_rms_target=None):
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
         proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
         self.logger.info("Issuing hera_catcher_up.py")
@@ -108,12 +108,14 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
         proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i", "--noredistapcp"])
         proc3.wait()
-        self.logger.info("Issuing input balance with target %f" % input_power_target)
-        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
-        proc3.wait()
-        self.logger.info("Issuing output balance with target %f" % output_rms_target)
-        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
-        proc3.wait()
+        if input_power_target is not None:
+            self.logger.info("Issuing input balance with target %f" % input_power_target)
+            proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
+            proc3.wait()
+        if output_power_target is not None:
+            self.logger.info("Issuing output balance with target %f" % output_rms_target)
+            proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
+            proc3.wait()
         proc1.wait()
         proc2.wait()
 
