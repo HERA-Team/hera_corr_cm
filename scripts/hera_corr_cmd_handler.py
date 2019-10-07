@@ -1,4 +1,6 @@
 #!/usr/bin/env python
+import socket
+hostname = socket.gethostname()
 
 if __name__ == "__main__":
     import argparse
@@ -14,7 +16,7 @@ if __name__ == "__main__":
 
     handler = HeraCorrHandler(redishost=args.redishost, testmode=args.testmode)
 
-    script_redis_key = "status:script:%s" % __file__
+    script_redis_key = "status:script:%s:%s" % (hostname, __file__)
     
     while(True):
         # Set an expiring redis key so we know if this script dies

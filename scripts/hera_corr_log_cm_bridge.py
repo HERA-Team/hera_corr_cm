@@ -1,9 +1,12 @@
 import argparse
 import logging
 import redis
+import socket
 from hera_corr_cm import helpers
 from hera_mc import mc
 from astropy.time import Time
+
+hostname = socket.gethostname()
 
 allowed_levels = ["DEBUG", "INFO", "NOTIFY", "WARNING", "ERROR", "CRITICAL"]
 logging.addLevelName(logging.INFO+1, "NOTIFY")
@@ -28,7 +31,7 @@ logger = helpers.add_default_log_handlers(logging.getLogger(__file__))
 
 print('Connecting to redis server %s' % args.redishost)
 r = redis.Redis(args.redishost)
-script_redis_key = "status:script:%s" % __file__
+script_redis_key = "status:script:%s:%s" % (hostname, __file__)
 ps = r.pubsub()
 ps.subscribe('log-channel')
 
