@@ -605,6 +605,8 @@ class HeraCorrCM(object):
             fem_switch(str)       : Switch state for this FEM ('antenna', 'load', or 'noise')
             fem_e_lna_power(bool) : True if East-pol LNA is powered
             fem_n_lna_power(bool) : True if North-pol LNA is powered
+            fem_imu_theta (float) : IMU-reported theta (degrees)
+            fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
             histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
@@ -632,6 +634,8 @@ class HeraCorrCM(object):
             'fem_switch'  : str,
             'fem_e_lna_power' : lambda x : (x == 'True'),
             'fem_n_lna_power' : lambda x : (x == 'True'),
+            'fem_imu_theta' : float,
+            'fem_imu_phi'   : float,
             'eq_coeffs'   : json.loads,
             'histogram'   : json.loads,
             'autocorrelation' : json.loads,
