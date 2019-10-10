@@ -112,7 +112,7 @@ class HeraCorrHandler(object):
             self.logger.info("Issuing input balance with target %f" % input_power_target)
             proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
             proc3.wait()
-        if output_power_target is not None:
+        if output_rms_target is not None:
             self.logger.info("Issuing output balance with target %f" % output_rms_target)
             proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
             proc3.wait()
