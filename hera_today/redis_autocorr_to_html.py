@@ -15,10 +15,10 @@ n_ants = 192
 NCHANS = int(2048 // 4 * 3)
 NCHANS_F = 8192
 NCHAN_SUM = 4
-frange = np.linspace(0, 250e6, NCHANS_F + 1)[1536 : 1536 + (8192 // 4 * 3)]
+frange = np.linspace(0, 250e6, NCHANS_F + 1)[1536:1536 + (8192 // 4 * 3)]
 # average over channels
 frange = frange.reshape(NCHANS, NCHAN_SUM).sum(axis=1) / NCHAN_SUM
-frange_str = ', '.join('%f'%freq for freq in frange)
+frange_str = ', '.join('{freq:f}'.format(freq=freq)for freq in frange)
 linenames = []
 
 # All this code does is build an html file
@@ -73,35 +73,41 @@ with open('/var/www/html/powers.html', 'w') as fh:
   got_time = True
   # grab data from redis and format it according to plotly's javascript api
   for i in range(n_ants):
-    for pol in ['e','n']:
+    for pol in ['e', 'n']:
         # get the timestamp from redis for the first ant-pol
         if not got_time:
-            t_plot_jd = float(r.hget('visdata://%d/%d/%s%s' % (i,i,pol,pol), 'time'))
+            t_plot_jd = float(r.hget('visdata://{i:d}/{j:d}/{i_pol:s}{j_pol:s}'
+                                     .format(i=i, j=i, i_pol=pol, j_pol=pol),
+                                     'time'
+                                     )
+                              )
+
             if t_plot_jd is not None:
                 t_plot_unix = Time(t_plot_jd, format='jd').unix
                 got_time = True
-        linename = 'ant%d%s' % (i,pol)
-        d = r.get('auto:%d%s' % (i, pol))#r.hget('visdata://%d/%d/%s%s' % (i,i,pol,pol), 'data')
+        linename = 'ant{ant:d}{pol:s}'.format(ant=i, pol=pol)
+        d = r.get('auto:{ant:d}{pol:s}'.format(ant=i, pol=pol))
+        #r.hget('visdata://%d/%d/%s%s' % (i,i,pol,pol), 'data')
         if d is not None:
             n_signals += 1
             linenames += [linename]
-            fh.write('%s = {\n' % (linename))
-            fh.write('  x: [%s],\n' % frange_str)
+            fh.write('{name:s} = {\n'.format(name=linename))
+            fh.write('  x: [{frange:s}],\n'.format(frange=frange_str))
             f = np.fromstring(d, dtype=np.float32)[0:NCHANS]
             f[f<10**-2.5] = 10**-2.5
             f = 10*np.log10(f)
-            f_str = ', '.join('%f'%freq for freq in f)
-            fh.write('  y: [%s],\n' % f_str)
-            fh.write("  name: '%s',\n"%linename)
+            f_str = ', '.join('{freq:f}'.format(freq=freq) for freq in f)
+            fh.write('  y: [{f_str:s}],\n'.format(f_str=f_str))
+            fh.write("  name: '{name:s}',\n".format(name=linename))
             fh.write("  type: 'scatter'\n")
             fh.write('};\n')
             fh.write('\n')
-  fh.write('data = [%s];\n' % ', '.join(linenames))
+  fh.write('data = [{name:s}];\n'.format(name=', '.join(linenames)))
 
   fh.write(plotly_postamble)
-  fh.write('<p>Plots from %s UTC (JD: %f)</p>\n' % (time.ctime(t_plot_unix), t_plot_jd))
-  fh.write('<p>Queried on %s UTC</p>\n' % time.ctime())
+  fh.write('<p>Plots from {unix:s} UTC (JD: {jd:f})</p>\n'.format(unix=time.ctime(t_plot_unix), jd=t_plot_jd))
+  fh.write('<p>Queried on {now:s} UTC</p>\n'.format(now=time.ctime())
   #fh.write('<p>CMINFO source: %s</p>\n' % r['cminfo_source'])
   fh.write(html_postamble)
 
-print('Got %d signals' % n_signals)
+print('Got {n_sig:d} signals'.format(n_sig=n_signals))
