@@ -56,9 +56,9 @@ class HeraMCHandler(logging.Handler):
         message = self.format(record)
         logtime = self.Time(time.time(), format="unix")
         self.session.add_subsystem_error(logtime, self.subsystem, severity, message)
-            
-            
-    
+
+
+
 def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=NOTIFY, include_mc=False, mc_level=logging.WARNING):
     if getattr(logger, IS_INITIALIZED_ATTR, False):
         return logger
@@ -92,7 +92,8 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     try:
         redis_host.ping()
     except redis.ConnectionError:
-        logger.warn("Couldn't connect to redis server at %s"%redishostname)
+        logger.warn("Couldn't connect to redis server "
+                    "at {host}".format(host=redishostname))
         return logger
 
     redis_handler = RedisHandler('log-channel', redis_host)
@@ -103,5 +104,9 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     return logger
 
 def log_notify(log, message=None):
-    msg = message or "%s starting on %s" % (log.name, socket.gethostname())
+    msg = (message
+           or "{logname} starting on {host}".format(logname=log.name,
+                                                    host=socket.gethostname()
+                                                    )
+           )
     log.log(NOTIFY, msg)
