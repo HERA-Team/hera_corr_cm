@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description='Subscribe to the redis-based log s
 parser.add_argument('-r', dest='redishost', type=str, default='redishost',
                     help ='Host servicing redis requests')
 parser.add_argument('-l', dest='level', type=str, default="NOTIFY",
-                    help ='Don\'t log messages below this level. Allowed values are %s' % allowed_levels)
+                    help ='Don\'t log messages below this level. Allowed values are {vals=:}'.format(vals=allowed_levels))
 
 args = parser.parse_args()
 
@@ -29,9 +29,9 @@ else:
 
 logger = helpers.add_default_log_handlers(logging.getLogger(__file__))
 
-print(('Connecting to redis server %s' % args.redishost))
+print(('Connecting to redis server {host:s}'.format(host=args.redishost)))
 r = redis.Redis(args.redishost)
-script_redis_key = "status:script:%s:%s" % (hostname, __file__)
+script_redis_key = "status:script:{host:s}:{file:s}".format(host=hostname, file=__file__)
 ps = r.pubsub()
 ps.subscribe('log-channel')
 
@@ -61,4 +61,3 @@ while(True):
     except KeyboardInterrupt:
         r.set(script_redis_key, "killed by KeyboardInterrupt", timeout=600)
         exit()
-
