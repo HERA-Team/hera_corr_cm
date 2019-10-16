@@ -737,9 +737,9 @@ class HeraCorrCM(object):
             'timestamp': dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
