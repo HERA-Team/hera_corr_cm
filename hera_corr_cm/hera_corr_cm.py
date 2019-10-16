@@ -5,6 +5,7 @@ import yaml
 import json
 import dateutil.parser
 import datetime
+import numpy as np
 from .helpers import add_default_log_handlers
 from . import __package__, __version__
 
@@ -28,7 +29,7 @@ class HeraCorrCM(object):
     redis_connections = {}
     response_channels = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER):
+    def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
         """
         Create a connection to the correlator
         via a redis server.
@@ -39,8 +40,12 @@ class HeraCorrCM(object):
                 is running.
             logger (logging.Logger): A logging instance. If not provided,
                 the class will instantiate its own.
+            include_fpga (Boolean): If True, instantiate a connection to HERA
+                F-engines.
+            danger_mode (Boolean): If True, disables the only-allow-command-when-not-observing checks.
         """
         self.logger = logger
+        self.danger_mode = danger_mode
         # If the redishost is one we've already connected to, use it again.
         # Otherwise, add it.
         # Also share response channels. This opens the door to all sorts of
@@ -158,8 +163,12 @@ class HeraCorrCM(object):
     def _require_not_recording(self):
         recording, recording_time = self.is_recording()
         if recording:
-            self.logger.error("Correlator is recording!")
-            return False
+            if self.danger_mode:
+                self.logger.warning("Corelator is recording, but command blocks disabled!")
+                return True
+            else:
+                self.logger.error("Correlator is recording!")
+                return False
         else:
             return True
 
@@ -352,6 +361,31 @@ class HeraCorrCM(object):
             return ERROR
         return OK
 
+    def antenna_enable(self, ant=None):
+        """
+        Enables antenna state. Used to turn off noise diode and load.
+        inputs:
+            ant (integer): HERA antenna number to switch to antenna. Set to None for all antennas.
+        returns:
+            ERROR or OK
+        """
+        if (ant is not None) and (not isinstance(ant, int)):
+            self.logger.error("Invalid `ant` argument. Should be integer or None")
+            return ERROR
+        if not self._require_not_recording():
+            return ERROR
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if (ant is not None) or (not self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
+            return OK
+        return ERROR
 
     def noise_diode_enable(self, ant=None):
         """
@@ -375,7 +409,7 @@ class HeraCorrCM(object):
         if "err" in response:
             self.logger.error(response["err"])
             return ERROR
-        if (ant is not None) or self.noise_diode_is_on()[0]:
+        if (ant is not None) or (self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
             return OK
         return ERROR
 
@@ -387,12 +421,22 @@ class HeraCorrCM(object):
         returns:
             ERROR or OK
         """
+        self.enable_antenna(ant=ant)
+
+    def load_enable(self, ant=None):
+        """
+        Enable FEM load terminator.
+        inputs:
+            ant (integer): HERA antenna number to switch to load. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
+        """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
             return ERROR
         if not self._require_not_recording():
             return ERROR
-        sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
+        sent_message = self._send_message("rf_switch", ant=ant, input_sel="load")
         if sent_message is None:
             return ERROR
         response = self._get_response(sent_message)
@@ -401,9 +445,19 @@ class HeraCorrCM(object):
         if "err" in response:
             self.logger.error(response["err"])
             return ERROR
-        if (ant is not None) or not self.noise_diode_is_on()[0]:
+        if (ant is not None) or (self.load_is_on()[0] and not self.noise_diode_is_on()[0]):
             return OK
         return ERROR
+
+    def load_disable(self, ant=None):
+        """
+        Disable FEM load terminator.
+        inputs:
+            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+        returns:
+            ERROR or OK
+        """
+        self.enable_antenna(ant=ant)
 
     def noise_diode_is_on(self):
         """
@@ -412,6 +466,106 @@ class HeraCorrCM(object):
         """
         x = self._hgetall("corr:status_noise_diode")
         return x["state"] == "on", float(x["time"])
+
+    def load_is_on(self):
+        """
+        Returns: enable_state, UNIX timestamp (float) of last state change
+        enable_state is True if load is on. Else False.
+        """
+        x = self.r.hgetall("corr:status_load")
+        return x["state"] == "on", float(x["time"])
+
+    def set_eq_coeffs(self, ant, pol, coeffs):
+        """
+        Set the gain coefficients for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+            coeffs (numpy.array): Coefficients to load.
+        returns:
+            ERROR or OK
+        """
+        coeffs_list = coeffs.tolist()
+        sent_message = self._send_message("snap_eq", ant=ant, pol=pol, coeffs=coeffs_list)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        return OK
+
+    def get_eq_coeffs(self, ant, pol):
+        """
+        Get the currently loaded gain coefficients for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+        returns:
+            time (UNIX timestamp float), coefficients (numpy array of floats)
+            or ERROR, in the case of a failure
+        """
+        try:
+            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:%d:%s' % (ant, pol)).items()}
+        except KeyError:
+            self.logger.error("Failed to get antenna coefficients from redis. Does this antenna exist?")
+            return ERROR
+        try:
+            t = float(v['time'])
+        except:
+            self.logger.error("Failed to cast EQ coefficient upload time to float")
+            return ERROR
+        try:
+            coeffs = np.array(json.loads(v['values']), dtype=np.float)
+        except:
+            self.logger.error("Failed to cast EQ coefficients to numpy float array")
+            return ERROR
+        return t, coeffs
+
+    def get_pam_atten(self, ant, pol):
+        """
+        Get the currently loaded pam attenuation value for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+        returns:
+            ERROR, or attenuation value in dB (integer)
+        """
+        sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="r")
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        if "val" not in response:
+            return ERROR
+        return response["val"]
+
+    def set_pam_atten(self, ant, pol, atten):
+        """
+        Get the currently loaded pam attenuation value for a given feed.
+        inputs:
+            ant (integer): HERA antenna number to query
+            pol (string): Polarization to query (must be 'e' or 'n')
+            atten (integer): Attenuation value in dB
+        returns:
+            OK or ERROR
+        """
+        sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="w", val=atten)
+        if sent_message is None:
+            return ERROR
+        response = self._get_response(sent_message)
+        if response is None:
+            return ERROR
+        if "err" in response:
+            self.logger.error(response["err"])
+            return ERROR
+        return OK
 
     def get_bit_stats(self):
         """
@@ -503,6 +657,11 @@ class HeraCorrCM(object):
             fem_voltage (float)   : FEM voltage sensor reading for this antenna (V)
             fem_current (float)   : FEM current sensor reading for this antenna (A)
             fem_id (list)         : Bytewise serial number of this FEM
+            fem_switch(str)       : Switch state for this FEM ('antenna', 'load', or 'noise')
+            fem_e_lna_power(bool) : True if East-pol LNA is powered
+            fem_n_lna_power(bool) : True if North-pol LNA is powered
+            fem_imu_theta (float) : IMU-reported theta (degrees)
+            fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
             histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
@@ -528,6 +687,10 @@ class HeraCorrCM(object):
             'fem_current' : float,
             'fem_id'      : json.loads,
             'fem_switch'  : str,
+            'fem_e_lna_power' : lambda x : (x == 'True'),
+            'fem_n_lna_power' : lambda x : (x == 'True'),
+            'fem_imu_theta' : float,
+            'fem_imu_phi'   : float,
             'eq_coeffs'   : json.loads,
             'histogram'   : json.loads,
             'autocorrelation' : json.loads,
