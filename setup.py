@@ -11,7 +11,7 @@ try:
 except:
     ver = VERSION
     print(('Couldn\'t get version from git. Defaulting to {ver:s}'.format(ver=ver)))
-print('Version is: {ver=s}'.format(ver=ver))
+print('Version is: {ver:s}'.format(ver=ver))
 
 # Generate a __version__.py file with this version in it
 here = os.path.abspath(os.path.dirname(__file__))
