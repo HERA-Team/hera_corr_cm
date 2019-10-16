@@ -111,7 +111,9 @@ class HeraCorrCM(object):
         message = json.dumps({"command":command, "time":time.time(), "args":kwargs})
         listeners = self.r.publish("corr:message", message)
         if listeners == 0:
-            self.logger.error("Sent command %s but no-one is listening!" % command)
+            self.logger.error("Sent command {cmd} "
+                              "but no-one is listening!".format(cmd=command)
+                              )
             return None
         else:
             return message
@@ -176,13 +178,13 @@ class HeraCorrCM(object):
         """
         Return the number of spectra in a given interval of `secs` seconds.
         """
-        return secs / ((2.0*N_CHAN) / SAMPLE_RATE)
+        return secs / ((2.0 * N_CHAN) / SAMPLE_RATE)
 
     def n_spectra_to_secs(self, n):
         """
         Return the time interval in seconds corresponding to `n` spectra.
         """
-        return n * ((2.0*N_CHAN) / SAMPLE_RATE)
+        return n * ((2.0 * N_CHAN) / SAMPLE_RATE)
 
 
     def take_data(self, starttime, duration, acclen, tag=None):
@@ -219,16 +221,26 @@ class HeraCorrCM(object):
             if response is None:
                 return ERROR
             try:
+                # correlator always rounds down
                 # in ms
-                time_diff = starttime - response["starttime"] # correlator always rounds down
+                time_diff = starttime - response["starttime"]
             except:
-                self.logger.error("Couldn't parse response %s" % response)
+                self.logger.error("Couldn't parse "
+                                  "response {rsp}".format(rsp=response)
+                                  )
                 return ERROR
 
-            if time_diff  > 100:
-                self.logger.warning("Time difference between commanded and accepted start time is %fms" % time_diff)
+            if time_diff > 100:
+                self.logger.warning("Time difference between "
+                                    "commanded and accepted start "
+                                    "time is {diff:f}ms".format(time_diff)
+                                    )
                 return ERROR
-            self.logger.info("Starting correlator at time %s (%.3fms before commanded)" % (time.ctime(response["starttime"] / 1000.), time_diff))
+            self.logger.info("Starting correlator at time {start} "
+                             "({diff:.3f}ms before commanded)"
+                             .format(start=time.ctime(response["starttime"] / 1000.),
+                                     diff=time_diff)
+                             )
             return response["starttime"]
 
     def stop_taking_data(self):
@@ -242,7 +254,6 @@ class HeraCorrCM(object):
         if response is None:
             return ERROR
         return OK
-
 
     def phase_switch_disable(self, timeout=10):
         """
@@ -260,7 +271,6 @@ class HeraCorrCM(object):
         if not self.phase_switch_is_on()[0]:
             return OK
         return ERROR
-
 
     def phase_switch_enable(self):
         """
@@ -288,7 +298,6 @@ class HeraCorrCM(object):
         x = self._hgetall("corr:status_phase_switch")
         return x["state"] == "on", float(x["time"])
 
-
     def update_config(self, configfile):
         """
         Updates the correlator configuration, which defines
@@ -301,8 +310,7 @@ class HeraCorrCM(object):
         """
         with open(configfile, "r") as fh:
             upload_time = time.time()
-            self.r.hmset("snap_configuration", {"config":fh.read(), "upload_time":upload_time, "upload_time_str":time.ctime(upload_time)})
-
+            self.r.hmset("snap_configuration", {"config": fh.read(), "upload_time": upload_time, "upload_time_str": time.ctime(upload_time)})
 
     def get_config(self):
         """
@@ -508,7 +516,7 @@ class HeraCorrCM(object):
             or ERROR, in the case of a failure
         """
         try:
-            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:%d:%s' % (ant, pol)).items()}
+            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'.format(ant=ant, pol=pol)).items()}
         except KeyError:
             self.logger.error("Failed to get antenna coefficients from redis. Does this antenna exist?")
             return ERROR
@@ -589,9 +597,9 @@ class HeraCorrCM(object):
                     {"heraNode1Snap1" : {"temp":61.4, "ip_address": "10.0.1.101", ... },
                 }
         """
-        keystart = "status:%s:" % stattype
+        keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
-        for key in self.r.scan_iter(keystart+"*"):
+        for key in self.r.scan_iter(keystart + "*"):
             rv[key.decode().lstrip(keystart)] = self._hgetall(key)
         return rv
 
