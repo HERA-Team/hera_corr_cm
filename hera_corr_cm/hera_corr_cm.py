@@ -17,6 +17,7 @@ SAMPLE_RATE = 500e6
 
 LOGGER = add_default_log_handlers(logging.getLogger(__name__))
 
+
 class HeraCorrCM(object):
     """
     A class to encapsulate an interface to
@@ -57,7 +58,7 @@ class HeraCorrCM(object):
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
             self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
             self.response_channels[redishost].subscribe("corr:response")
-            self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
+            self.response_channels[redishost].get_message(timeout=0.1)  # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
 
@@ -78,7 +79,7 @@ class HeraCorrCM(object):
         except:
             self.logger.error("Failed to decode sent command")
         target_time = sent_message["time"]
-        target_cmd  = sent_message["command"]
+        target_cmd = sent_message["command"]
         # This loop only gets activated if we get a response which
         # isn't for us.
         while(True):
@@ -108,7 +109,9 @@ class HeraCorrCM(object):
         Returns:
             correlator response to this command
         """
-        message = json.dumps({"command":command, "time":time.time(), "args":kwargs})
+        message = json.dumps({"command": command,
+                              "time": time.time(),
+                              "args": kwargs})
         listeners = self.r.publish("corr:message", message)
         if listeners == 0:
             self.logger.error("Sent command {cmd} "
@@ -185,7 +188,6 @@ class HeraCorrCM(object):
         Return the time interval in seconds corresponding to `n` spectra.
         """
         return n * ((2.0 * N_CHAN) / SAMPLE_RATE)
-
 
     def take_data(self, starttime, duration, acclen, tag=None):
         """
@@ -318,9 +320,9 @@ class HeraCorrCM(object):
         processed yaml string.
         Returns: last update time (UNIX timestamp float), Configuration structure, configuration hash
         """
-        config      = self.r.hget("snap_configuration", "config")
+        config = self.r.hget("snap_configuration", "config")
         config_time = self.r.hget("snap_configuration", "upload_time")
-        md5         = self.r.hget("snap_configuration", "md5")
+        md5 = self.r.hget("snap_configuration", "md5")
         return float(config_time), yaml.load(config, Loader=yaml.FullLoader), md5
 
     def restart(self):
@@ -343,7 +345,7 @@ class HeraCorrCM(object):
         self.logger.info("Issuing Hard Stop command")
         # Try and be gracious
         self.stop_taking_data()
-        is_recording, is_recording_time = self.is_recording() # This is a stupid definition.
+        is_recording, is_recording_time = self.is_recording()  # This is a stupid definition.
         if is_recording:
             self.logger.warning("Data taking failed to end gracefully")
 
@@ -628,13 +630,13 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("snap")
         conv_methods = {
-            'pmb_alert' : lambda x : bool(int(x)),
-            'pps_count' : int,
-            'serial'    : str,
-            'temp'      : float,
-            'uptime'    : int,
-            'last_programmed' : dateutil.parser.parse,
-            'timestamp' : dateutil.parser.parse,
+            'pmb_alert': lambda x: bool(int(x)),
+            'pps_count': int,
+            'serial': str,
+            'temp': float,
+            'uptime': int,
+            'last_programmed': dateutil.parser.parse,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
         for host, val in stats.items():
@@ -680,29 +682,29 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("ant")
         conv_methods = {
-            'adc_mean'    : float,
-            'adc_rms'     : float,
-            'adc_power'   : float,
-            'f_host'      : str,
-            'host_ant_id' : int,
-            'pam_atten'   : int,
-            'pam_power'   : float,
-            'pam_voltage' : float,
-            'pam_current' : float,
-            'pam_id'      : json.loads,
-            'fem_temp'    : float,
-            'fem_voltage' : float,
-            'fem_current' : float,
-            'fem_id'      : json.loads,
-            'fem_switch'  : str,
-            'fem_e_lna_power' : lambda x : (x == 'True'),
-            'fem_n_lna_power' : lambda x : (x == 'True'),
-            'fem_imu_theta' : float,
-            'fem_imu_phi'   : float,
-            'eq_coeffs'   : json.loads,
-            'histogram'   : json.loads,
-            'autocorrelation' : json.loads,
-            'timestamp'   : dateutil.parser.parse,
+            'adc_mean': float,
+            'adc_rms': float,
+            'adc_power': float,
+            'f_host': str,
+            'host_ant_id': int,
+            'pam_atten': int,
+            'pam_power': float,
+            'pam_voltage': float,
+            'pam_current': float,
+            'pam_id': json.loads,
+            'fem_temp': float,
+            'fem_voltage': float,
+            'fem_current': float,
+            'fem_id': json.loads,
+            'fem_switch': str,
+            'fem_e_lna_power': lambda x: (x == 'True'),
+            'fem_n_lna_power': lambda x: (x == 'True'),
+            'fem_imu_theta': float,
+            'fem_imu_phi': float,
+            'eq_coeffs': json.loads,
+            'histogram': json.loads,
+            'autocorrelation': json.loads,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
         for host, val in stats.items():
@@ -729,10 +731,10 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("snaprf")
         conv_methods = {
-            'eq_coeffs'   : json.loads,
-            'histogram'   : json.loads,
-            'autocorrelation' : json.loads,
-            'timestamp'   : dateutil.parser.parse,
+            'eq_coeffs': json.loads,
+            'histogram': json.loads,
+            'autocorrelation': json.loads,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
         for host, val in stats.iteritems():
@@ -782,7 +784,9 @@ class HeraCorrCM(object):
             rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
 
         # Add this package
-        rv[__package__] = {"version": __version__, "timestamp":datetime.datetime.now()}
+        rv[__package__] = {"version": __version__,
+                           "timestamp": datetime.datetime.now()
+                           }
 
         # SNAP init is a special case
         snap_init = self._hgetall("init_configuration")
