@@ -2,7 +2,6 @@ import logging
 import redis
 import time
 import json
-import logging
 
 from subprocess import Popen, PIPE
 from . import helpers
@@ -12,9 +11,10 @@ CATCHER_HOST = "hera-sn1"
 SNAP_HOST = "hera-snap-head"
 SNAP_USER = "hera"
 SNAP_ENVIRONMENT = "~/.venv/bin/activate"
-X_HOSTS = ["px%d" % i for i in range(1,17)]
+X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
 DEFAULT_FILE_TIME_MS = 200000
+
 
 class HeraCorrHandler(object):
     def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
@@ -34,7 +34,10 @@ class HeraCorrHandler(object):
             self._cmd_handler(message["data"])
 
     def _send_response(self, command, time, **kwargs):
-        message_dict = {"command":command, "time":time, "args":kwargs}
+        message_dict = {"command": command,
+                        "time": time,
+                        "args": kwargs
+                        }
         n = self.r.publish("corr:response", json.dumps(message_dict))
 
     def _gpu_is_on(self):
@@ -44,7 +47,7 @@ class HeraCorrHandler(object):
         on = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                on = on and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "on"
+                on = on and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "INTSTAT") == "on"
         return on
 
     def _gpu_is_off(self):
@@ -54,7 +57,7 @@ class HeraCorrHandler(object):
         off = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                off = off and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "INTSTAT") == "off"
+                off = off and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "INTSTAT") == "off"
         return off
 
     def _outthread_is_blocked(self):
@@ -64,7 +67,7 @@ class HeraCorrHandler(object):
         blocked = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                blocked = blocked and self.r.hget("hashpipe://%s/%d/status" % (host, pipe), "OUTSTAT") == "blocked"
+                blocked = blocked and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "OUTSTAT") == "blocked"
         return blocked
 
     def _start_capture(self, starttime, duration, acclen, tag):
@@ -78,7 +81,12 @@ class HeraCorrHandler(object):
         """
         self._stop_capture()
         self.logger.info("Starting correlator")
-        proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
+        proc = Popen(["hera_ctl.py",
+                      "start",
+                      "-n", "{len:d}".format(len=acclen),
+                      "-t", "{start:f}".format(starttime / 1000.)
+                      ]
+                     )
         proc.wait()
         # If the duration is less than the default file time, take one file of length duration.
         # Else take files of default size, rounding down the total number of files.
@@ -88,10 +96,20 @@ class HeraCorrHandler(object):
         else:
             file_time_ms = DEFAULT_FILE_TIME_MS
             nfiles = int((1000. * duration) // DEFAULT_FILE_TIME_MS)
-        self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, file_time_ms))
-        proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % file_time_ms, "-n", "%d" % nfiles, "--tag", tag, CATCHER_HOST])
+        self.logger.info("Taking data on {host:s}: "
+                         "{nfile:d} files of length "
+                         "{len:d} ms".format(host=CATCHER_HOST,
+                                             nfile=nfiles,
+                                             len=file_time_ms)
+                         )
+        proc = Popen(["hera_catcher_take_data.py",
+                      "-m", "{time:d}".format(file_time_ms),
+                      "-n", "{nfile:d}".format(nfiles),
+                      "--tag", tag, CATCHER_HOST
+                      ]
+                     )
         proc.wait()
-    
+
     def _xtor_down(self):
         self.logger.info("Issuing hera_catcher_down.sh")
         proc2 = Popen(["hera_catcher_down.sh"])
@@ -106,19 +124,42 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing hera_catcher_up.py")
         proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
-        proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i", "--noredistapcp"])
+        proc3 = Popen(["ssh",
+                       "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
+                       "source", SNAP_ENVIRONMENT,
+                       "&&",
+                       "hera_snap_feng_init.py",
+                       "-P", "-s", "-e", "-i", "--noredistapcp"])
         proc3.wait()
         if input_power_target is not None:
-            self.logger.info("Issuing input balance with target %f" % input_power_target)
-            proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_input_power_eq.py", "-e", "%f"%input_power_target, "-n", "%f"%input_power_target])
+            self.logger.info("Issuing input balance "
+                             "with target {pow:f}".format(pow=input_power_target)
+                             )
+            proc3 = Popen(["ssh",
+                           "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
+                           "source", SNAP_ENVIRONMENT,
+                           "&&",
+                           "hera_snap_input_power_eq.py",
+                           "-e", "{pow:f}".format(pow=input_power_target),
+                           "-n", "{pow:f}".format(pow=input_power_target)
+                           ]
+                          )
             proc3.wait()
         if output_rms_target is not None:
-            self.logger.info("Issuing output balance with target %f" % output_rms_target)
-            proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
+            self.logger.info("Issuing output balance "
+                             "with target {rms:f}".format(rms=output_rms_target)
+                             )
+            proc3 = Popen(["ssh",
+                           "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
+                           "source", SNAP_ENVIRONMENT,
+                           "&&",
+                           "hera_snap_output_power_eq.py",
+                           "--rms", "{rms:f}".format(rms=output_rms_target)
+                           ]
+                          )
             proc3.wait()
         proc1.wait()
         proc2.wait()
-
 
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
@@ -128,7 +169,7 @@ class HeraCorrHandler(object):
         TIMEOUT = 30
         self.logger.info("Waiting for catcher to stop")
         while(time.time() - stop_time) < TIMEOUT:
-            recording, update_time =  self.cm.is_recording()
+            recording, update_time = self.cm.is_recording()
             if not recording:
                 self.logger.info("Correlator is not recording")
                 break
@@ -152,18 +193,22 @@ class HeraCorrHandler(object):
                 self.logger.info("X-Engines have stopped")
                 return
         self.logger.warning("X-Engines failed to stop in %d seconds" % TIMEOUT)
-    
+
     def _cmd_handler(self, message):
         d = json.loads(message)
         command = d["command"]
         time = d["time"]
         args = d["args"]
-        self.logger.info("Got command: %s" % command)
-        self.logger.info("       args: %s" % args)
+        self.logger.info("Got command: {cmd:s}".format(cmd=command))
+        self.logger.info("       args: {args:s}".format(args=args))
         if command == "record":
             if not self.testmode:
-                self._start_capture(args["starttime"], args["duration"], args["acclen"], args["tag"])
-            starttime = float(self.r["corr:trig_time"]) * 1000 #Send in ms
+                self._start_capture(args["starttime"],
+                                    args["duration"],
+                                    args["acclen"],
+                                    args["tag"]
+                                    )
+            starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
             self._send_response(command, time, starttime=starttime)
         elif command == "stop":
             if not self.testmode:
