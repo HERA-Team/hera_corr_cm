@@ -106,7 +106,7 @@ with open('/var/www/html/powers.html', 'w') as fh:
 
   fh.write(plotly_postamble)
   fh.write('<p>Plots from {unix:s} UTC (JD: {jd:f})</p>\n'.format(unix=time.ctime(t_plot_unix), jd=t_plot_jd))
-  fh.write('<p>Queried on {now:s} UTC</p>\n'.format(now=time.ctime())
+  fh.write('<p>Queried on {now:s} UTC</p>\n'.format(now=time.ctime()))
   #fh.write('<p>CMINFO source: %s</p>\n' % r['cminfo_source'])
   fh.write(html_postamble)
 
