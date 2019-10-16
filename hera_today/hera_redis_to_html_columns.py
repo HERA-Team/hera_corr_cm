@@ -5,17 +5,22 @@ import redis
 import datetime
 import json
 
+
 def start_row():
   return '<div class="row">'
+
 
 def end_row():
   return '</div>'
 
+
 def start_column():
   return '<div class="column">'
-  
+
+
 def end_column():
   return '</div>'
+
 
 r = redis.Redis('localhost')
 
@@ -89,11 +94,14 @@ with open("/var/www/html/nodes.html", "w") as fh:
   fh.write("<html>\n")
   fh.write(html_header)
   fh.write("  <body>\n")
-  fh.write("    <h0>%s UTC</h0>\n" % time.ctime())
+  fh.write("    <h0>{time:s} UTC</h0>\n".format(time.ctime()))
   # First print scripts status
   for k in sorted(r.keys()):
     if k.startswith("status:script:"):
-      fh.write("<h1>%s: %s</h1>" % (k.lstrip("status:script:"), r[k]))
+      fh.write("<h1>{name:s}: "
+               "{key:s}</h1>".format(name=k.lstrip("status:script:"),
+                                     key=r[k])
+               )
   fh.write(start_row())
   for k in sorted(r.keys()):
     if k.startswith("status:"):
@@ -105,7 +113,7 @@ with open("/var/www/html/nodes.html", "w") as fh:
               fh.write(end_column())
           fh.write(start_column())
           current_col = cols[stattype]
-      fh.write("    <h2>%s</h2>\n" % k)
+      fh.write("    <h2>{key:s}</h2>\n".format(key=k))
       x = r.hgetall(k)
       for key, val in sorted(x.items()):
         if key.startswith('histogram'):
@@ -132,12 +140,14 @@ with open("/var/www/html/nodes.html", "w") as fh:
               style = "color:green;"
         else:
           style = "color:black;"
-        fh.write("      <h3 style=\"%s\"><pre class='tab'>%s: %s</pre></h3>\n" % (style, key, val.replace('\n', '<br>')))
+        fh.write("      <h3 style=\"{style:s}\"><pre "
+                 "class='tab'>{key:s}: {val:s}</pre></h3>\n"
+                 .format(style=style, key=key, val=val.replace('\n', '<br>'))
+                 )
       fh.write("\n")
       fh.write("<hr>\n")
-  
+
   fh.write(end_column())
   fh.write(end_row())
   fh.write("  </body>\n")
   fh.write("</html>\n")
-    
