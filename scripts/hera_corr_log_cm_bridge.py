@@ -29,7 +29,7 @@ else:
 
 logger = helpers.add_default_log_handlers(logging.getLogger(__file__))
 
-print(('Connecting to redis server {host:s}'.format(host=args.redishost)))
+print('Connecting to redis server {host:s}'.format(host=args.redishost))
 r = redis.Redis(args.redishost)
 script_redis_key = "status:script:{host:s}:{file:s}".format(host=hostname, file=__file__)
 ps = r.pubsub()

@@ -10,7 +10,7 @@ try:
     ver = VERSION + '-' + subprocess.check_output(['git', 'describe', '--abbrev=8', '--always', '--dirty', '--tags']).strip().decode('utf-8')
 except:
     ver = VERSION
-    print(('Couldn\'t get version from git. Defaulting to {ver:s}'.format(ver=ver)))
+    print('Couldn\'t get version from git. Defaulting to {ver:s}'.format(ver=ver))
 print('Version is: {ver:s}'.format(ver=ver))
 
 # Generate a __version__.py file with this version in it
