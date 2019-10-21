@@ -235,7 +235,7 @@ class HeraCorrCM(object):
             if time_diff > 100:
                 self.logger.warning("Time difference between "
                                     "commanded and accepted start "
-                                    "time is {diff:f}ms".format(time_diff)
+                                    "time is {diff:f}ms".format(diff=time_diff)
                                     )
                 return ERROR
             self.logger.info("Starting correlator at time {start} "
