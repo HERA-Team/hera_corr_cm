@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(description='Subscribe to the redis-based log s
 parser.add_argument('-r', dest='redishost', type=str, default='redishost',
                     help ='Host servicing redis requests')
 parser.add_argument('-l', dest='level', type=str, default="NOTIFY",
-                    help ='Don\'t log messages below this level. Allowed values are {vals=:}'.format(vals=allowed_levels))
+                    help ='Don\'t log messages below this level. Allowed values are {vals:}'.format(vals=allowed_levels))
 
 args = parser.parse_args()
 

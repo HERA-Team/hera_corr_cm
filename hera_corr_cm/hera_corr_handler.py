@@ -84,7 +84,7 @@ class HeraCorrHandler(object):
         proc = Popen(["hera_ctl.py",
                       "start",
                       "-n", "{len:d}".format(len=acclen),
-                      "-t", "{start:f}".format(starttime / 1000.)
+                      "-t", "{start:f}".format(start=starttime / 1000.)
                       ]
                      )
         proc.wait()
@@ -103,8 +103,8 @@ class HeraCorrHandler(object):
                                              len=file_time_ms)
                          )
         proc = Popen(["hera_catcher_take_data.py",
-                      "-m", "{time:d}".format(file_time_ms),
-                      "-n", "{nfile:d}".format(nfiles),
+                      "-m", "{time:d}".format(time=file_time_ms),
+                      "-n", "{nfile:d}".format(nfile=nfiles),
                       "--tag", tag, CATCHER_HOST
                       ]
                      )
