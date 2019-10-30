@@ -482,7 +482,7 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if load is on. Else False.
         """
-        x = self.r.hgetall("corr:status_load")
+        x = self._hgetall("corr:status_load")
         return x["state"] == "on", float(x["time"])
 
     def set_eq_coeffs(self, ant, pol, coeffs):
