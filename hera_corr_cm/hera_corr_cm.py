@@ -431,7 +431,7 @@ class HeraCorrCM(object):
         returns:
             ERROR or OK
         """
-        self.enable_antenna(ant=ant)
+        self.antenna_enable(ant=ant)
 
     def load_enable(self, ant=None):
         """
@@ -467,7 +467,7 @@ class HeraCorrCM(object):
         returns:
             ERROR or OK
         """
-        self.enable_antenna(ant=ant)
+        self.antenna_enable(ant=ant)
 
     def noise_diode_is_on(self):
         """
