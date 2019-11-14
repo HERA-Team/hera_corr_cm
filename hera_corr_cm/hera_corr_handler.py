@@ -14,7 +14,9 @@ SNAP_USER = "hera"
 SNAP_ENVIRONMENT = "~/.venv/bin/activate"
 X_HOSTS = ["px%d" % i for i in range(1,17)]
 X_PIPES = 2
-DEFAULT_FILE_TIME_MS = 200000
+
+#hardcoded by hashpipe, all other values are ignored.
+DEFAULT_FILE_TIME_MS = 16000 
 
 class HeraCorrHandler(object):
     def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
@@ -78,6 +80,10 @@ class HeraCorrHandler(object):
         """
         self._stop_capture()
         self.logger.info("Starting correlator")
+        if (!(acclen&(acclen-1))): 
+            self.logger.error('Acclen not a power of 2!')
+        acclen = acclen//4
+
         proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
         proc.wait()
         # If the duration is less than the default file time, take one file of length duration.
