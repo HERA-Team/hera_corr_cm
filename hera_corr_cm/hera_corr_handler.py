@@ -105,10 +105,8 @@ class HeraCorrHandler(object):
         proc1.wait()
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
-        self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
-        proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
-        self.logger.info("Issuing hera_catcher_up.py")
-        proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
+
+        # For BDA snap_init has to happen first to ensure the antennas in the config file are correct.
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
         proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_feng_init.py", "-P", "-s", "-e", "-i", "--noredistapcp"])
         proc3.wait()
@@ -120,6 +118,11 @@ class HeraCorrHandler(object):
             self.logger.info("Issuing output balance with target %f" % output_rms_target)
             proc3 = Popen(["ssh", "%s@%s" % (SNAP_USER, SNAP_HOST), "source", SNAP_ENVIRONMENT, "&&", "hera_snap_output_power_eq.py", "--rms", "%f" % output_rms_target])
             proc3.wait()
+
+        self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
+        proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
+        self.logger.info("Issuing hera_catcher_up.py")
+        proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         proc1.wait()
         proc2.wait()
 
