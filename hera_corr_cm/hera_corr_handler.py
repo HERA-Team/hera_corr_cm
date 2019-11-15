@@ -80,8 +80,6 @@ class HeraCorrHandler(object):
         """
         self._stop_capture()
         self.logger.info("Starting correlator")
-        if (!(acclen&(acclen-1))): 
-            self.logger.error('Acclen not a power of 2!')
         acclen = acclen//4
 
         proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
