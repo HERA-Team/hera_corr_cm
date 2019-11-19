@@ -82,16 +82,19 @@ class HeraCorrHandler(object):
         self.logger.info("Starting correlator")
         acclen = acclen//4
 
+        # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2 
+        file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 2 * 8192/500e6 * 1000
+
         proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
         proc.wait()
         # If the duration is less than the default file time, take one file of length duration.
         # Else take files of default size, rounding down the total number of files.
-        if (1000 * duration) < DEFAULT_FILE_TIME_MS:
+        if (1000 * duration) < file_duration_ms:
             file_time_ms = 1000 * duration
             nfiles = 1
         else:
-            file_time_ms = DEFAULT_FILE_TIME_MS
-            nfiles = int((1000. * duration) / DEFAULT_FILE_TIME_MS)
+            file_time_ms = file_duration_ms
+            nfiles = int((1000. * duration) / file_duration_ms)
         self.logger.info("Taking data on %s: %d files of length %d ms" % (CATCHER_HOST, nfiles, file_time_ms))
         proc = Popen(["hera_catcher_take_data.py", "-m", "%d" % file_time_ms, "-n", "%d" % nfiles, "--tag", tag, CATCHER_HOST])
         proc.wait()
