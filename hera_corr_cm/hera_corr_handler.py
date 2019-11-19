@@ -83,7 +83,7 @@ class HeraCorrHandler(object):
         acclen = acclen//4
 
         # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2 
-        file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 2 * 8192/500e6 * 1000
+        file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 8192/500e6 * 1000
 
         proc = Popen(["hera_ctl.py", "start", "-n", "%d" % acclen, "-t", "%f" % (starttime / 1000.)])
         proc.wait()
