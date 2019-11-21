@@ -93,6 +93,7 @@ class HeraCorrHandler(object):
         # underlying integration rate.
         # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2 
         file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 8192/500e6 * 1000
+        file_duration_ms = int(file_duration_ms)
         proc = Popen(["hera_ctl.py",
                       "start",
                       "-n", "{len:d}".format(len=acclen),
