@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import time
 import redis
 import logging
@@ -6,10 +8,8 @@ import json
 import dateutil.parser
 import datetime
 import numpy as np
-from helpers import add_default_log_handlers
+from .helpers import add_default_log_handlers
 from . import __package__, __version__
-
-from hera_corr_f import HeraCorrelator
 
 OK = True
 ERROR = False
@@ -18,6 +18,7 @@ N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
 LOGGER = add_default_log_handlers(logging.getLogger(__name__))
+
 
 class HeraCorrCM(object):
     """
@@ -55,15 +56,13 @@ class HeraCorrCM(object):
         # multiple HeraCorrCM instances in the same program. But in most cases
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
-        if redishost not in self.redis_connections.keys():
+        if redishost not in list(self.redis_connections.keys()):
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
             self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
             self.response_channels[redishost].subscribe("corr:response")
-            self.response_channels[redishost].get_message(timeout=0.1) # flush "I've just subscribed" message
+            self.response_channels[redishost].get_message(timeout=0.1)  # flush "I've just subscribed" message
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
-        if include_fpga:
-            self.corr = HeraCorrelator(redishost=redishost, logger=logger, use_redis=True)
 
     def _get_response(self, command, timeout=10):
         """
@@ -82,7 +81,7 @@ class HeraCorrCM(object):
         except:
             self.logger.error("Failed to decode sent command")
         target_time = sent_message["time"]
-        target_cmd  = sent_message["command"]
+        target_cmd = sent_message["command"]
         # This loop only gets activated if we get a response which
         # isn't for us.
         while(True):
@@ -112,10 +111,14 @@ class HeraCorrCM(object):
         Returns:
             correlator response to this command
         """
-        message = json.dumps({"command":command, "time":time.time(), "args":kwargs})
+        message = json.dumps({"command": command,
+                              "time": time.time(),
+                              "args": kwargs})
         listeners = self.r.publish("corr:message", message)
         if listeners == 0:
-            self.logger.error("Sent command %s but no-one is listening!" % command)
+            self.logger.error("Sent command {cmd} "
+                              "but no-one is listening!".format(cmd=command)
+                              )
             return None
         else:
             return message
@@ -132,7 +135,7 @@ class HeraCorrCM(object):
         if not self.r.exists("corr:is_taking_data"):
             return False, None
         else:
-            x = self.r.hgetall("corr:is_taking_data")
+            x = self._hgetall("corr:is_taking_data")
             return x["state"] == "True", float(x["time"])
 
     def _conv_float(self, v):
@@ -180,14 +183,13 @@ class HeraCorrCM(object):
         """
         Return the number of spectra in a given interval of `secs` seconds.
         """
-        return secs / ((2.0*N_CHAN) / SAMPLE_RATE)
+        return secs / ((2.0 * N_CHAN) / SAMPLE_RATE)
 
     def n_spectra_to_secs(self, n):
         """
         Return the time interval in seconds corresponding to `n` spectra.
         """
-        return n * ((2.0*N_CHAN) / SAMPLE_RATE)
-
+        return n * ((2.0 * N_CHAN) / SAMPLE_RATE)
 
     def take_data(self, starttime, duration, acclen, tag=None):
         """
@@ -223,16 +225,26 @@ class HeraCorrCM(object):
             if response is None:
                 return ERROR
             try:
+                # correlator always rounds down
                 # in ms
-                time_diff = starttime - response["starttime"] # correlator always rounds down
+                time_diff = starttime - response["starttime"]
             except:
-                self.logger.error("Couldn't parse response %s" % response)
+                self.logger.error("Couldn't parse "
+                                  "response {rsp}".format(rsp=response)
+                                  )
                 return ERROR
 
-            if time_diff  > 100:
-                self.logger.warning("Time difference between commanded and accepted start time is %fms" % time_diff)
+            if time_diff > 100:
+                self.logger.warning("Time difference between "
+                                    "commanded and accepted start "
+                                    "time is {diff:f}ms".format(diff=time_diff)
+                                    )
                 return ERROR
-            self.logger.info("Starting correlator at time %s (%.3fms before commanded)" % (time.ctime(response["starttime"] / 1000.), time_diff))
+            self.logger.info("Starting correlator at time {start} "
+                             "({diff:.3f}ms before commanded)"
+                             .format(start=time.ctime(response["starttime"] / 1000.),
+                                     diff=time_diff)
+                             )
             return response["starttime"]
 
     def stop_taking_data(self):
@@ -246,7 +258,6 @@ class HeraCorrCM(object):
         if response is None:
             return ERROR
         return OK
-
 
     def phase_switch_disable(self, timeout=10):
         """
@@ -264,7 +275,6 @@ class HeraCorrCM(object):
         if not self.phase_switch_is_on()[0]:
             return OK
         return ERROR
-
 
     def phase_switch_enable(self):
         """
@@ -289,9 +299,8 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if phase switching is on. Else False.
         """
-        x = self.r.hgetall("corr:status_phase_switch")
+        x = self._hgetall("corr:status_phase_switch")
         return x["state"] == "on", float(x["time"])
-
 
     def update_config(self, configfile):
         """
@@ -305,8 +314,7 @@ class HeraCorrCM(object):
         """
         with open(configfile, "r") as fh:
             upload_time = time.time()
-            self.r.hmset("snap_configuration", {"config":fh.read(), "upload_time":upload_time, "upload_time_str":time.ctime(upload_time)})
-
+            self.r.hmset("snap_configuration", {"config": fh.read(), "upload_time": upload_time, "upload_time_str": time.ctime(upload_time)})
 
     def get_config(self):
         """
@@ -314,9 +322,9 @@ class HeraCorrCM(object):
         processed yaml string.
         Returns: last update time (UNIX timestamp float), Configuration structure, configuration hash
         """
-        config      = self.r.hget("snap_configuration", "config")
+        config = self.r.hget("snap_configuration", "config")
         config_time = self.r.hget("snap_configuration", "upload_time")
-        md5         = self.r.hget("snap_configuration", "md5")
+        md5 = self.r.hget("snap_configuration", "md5")
         return float(config_time), yaml.load(config, Loader=yaml.FullLoader), md5
 
     def restart(self):
@@ -339,7 +347,7 @@ class HeraCorrCM(object):
         self.logger.info("Issuing Hard Stop command")
         # Try and be gracious
         self.stop_taking_data()
-        is_recording, is_recording_time = self.is_recording() # This is a stupid definition.
+        is_recording, is_recording_time = self.is_recording()  # This is a stupid definition.
         if is_recording:
             self.logger.warning("Data taking failed to end gracefully")
 
@@ -468,7 +476,7 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if noise diode is on. Else False.
         """
-        x = self.r.hgetall("corr:status_noise_diode")
+        x = self._hgetall("corr:status_noise_diode")
         return x["state"] == "on", float(x["time"])
 
     def load_is_on(self):
@@ -476,7 +484,7 @@ class HeraCorrCM(object):
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if load is on. Else False.
         """
-        x = self.r.hgetall("corr:status_load")
+        x = self._hgetall("corr:status_load")
         return x["state"] == "on", float(x["time"])
 
     def set_eq_coeffs(self, ant, pol, coeffs):
@@ -512,7 +520,7 @@ class HeraCorrCM(object):
             or ERROR, in the case of a failure
         """
         try:
-            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:%d:%s' % (ant, pol)).items()}
+            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'.format(ant=ant, pol=pol)).items()}
         except KeyError:
             self.logger.error("Failed to get antenna coefficients from redis. Does this antenna exist?")
             return ERROR
@@ -593,12 +601,18 @@ class HeraCorrCM(object):
                     {"heraNode1Snap1" : {"temp":61.4, "ip_address": "10.0.1.101", ... },
                 }
         """
-        keystart = "status:%s:" % stattype
+        keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
-        for key in self.r.keys():
-            if key.startswith(keystart):
-                rv[key.lstrip(keystart)] = self.r.hgetall(key)
+        for key in self.r.scan_iter(keystart + "*"):
+            rv[key.decode().lstrip(keystart)] = self._hgetall(key)
         return rv
+
+    def _hgetall(self, rkey):
+        """
+        A wrapper around self.r.hgetall(rkey) which converts (.decode()'s)
+        the keys and values of the resulting byte array to a string.
+        """
+        return {key.decode(): val.decode() for key, val in self.r.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -618,18 +632,18 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("snap")
         conv_methods = {
-            'pmb_alert' : lambda x : bool(int(x)),
-            'pps_count' : int,
-            'serial'    : str,
-            'temp'      : float,
-            'uptime'    : int,
-            'last_programmed' : dateutil.parser.parse,
-            'timestamp' : dateutil.parser.parse,
+            'pmb_alert': lambda x: bool(int(x)),
+            'pps_count': int,
+            'serial': str,
+            'temp': float,
+            'uptime': int,
+            'last_programmed': dateutil.parser.parse,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
@@ -670,34 +684,34 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("ant")
         conv_methods = {
-            'adc_mean'    : float,
-            'adc_rms'     : float,
-            'adc_power'   : float,
-            'f_host'      : str,
-            'host_ant_id' : int,
-            'pam_atten'   : int,
-            'pam_power'   : float,
-            'pam_voltage' : float,
-            'pam_current' : float,
-            'pam_id'      : json.loads,
-            'fem_temp'    : float,
-            'fem_voltage' : float,
-            'fem_current' : float,
-            'fem_id'      : json.loads,
-            'fem_switch'  : str,
-            'fem_e_lna_power' : lambda x : (x == 'True'),
-            'fem_n_lna_power' : lambda x : (x == 'True'),
-            'fem_imu_theta' : float,
-            'fem_imu_phi'   : float,
-            'eq_coeffs'   : json.loads,
-            'histogram'   : json.loads,
-            'autocorrelation' : json.loads,
-            'timestamp'   : dateutil.parser.parse,
+            'adc_mean': float,
+            'adc_rms': float,
+            'adc_power': float,
+            'f_host': str,
+            'host_ant_id': int,
+            'pam_atten': int,
+            'pam_power': float,
+            'pam_voltage': float,
+            'pam_current': float,
+            'pam_id': json.loads,
+            'fem_temp': float,
+            'fem_voltage': float,
+            'fem_current': float,
+            'fem_id': json.loads,
+            'fem_switch': str,
+            'fem_e_lna_power': lambda x: (x == 'True'),
+            'fem_n_lna_power': lambda x: (x == 'True'),
+            'fem_imu_theta': float,
+            'fem_imu_phi': float,
+            'eq_coeffs': json.loads,
+            'histogram': json.loads,
+            'autocorrelation': json.loads,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
@@ -719,15 +733,15 @@ class HeraCorrCM(object):
         """
         stats = self._get_status_keys("snaprf")
         conv_methods = {
-            'eq_coeffs'   : json.loads,
-            'histogram'   : json.loads,
-            'autocorrelation' : json.loads,
-            'timestamp'   : dateutil.parser.parse,
+            'eq_coeffs': json.loads,
+            'histogram': json.loads,
+            'autocorrelation': json.loads,
+            'timestamp': dateutil.parser.parse,
         }
         rv = {}
-        for host, val in stats.iteritems():
+        for host, val in stats.items():
             rv[host] = {}
-            for key, convfunc in conv_methods.iteritems():
+            for key, convfunc in conv_methods.items():
                 try:
                     rv[host][key] = convfunc(stats[host][key])
                 except:
@@ -764,19 +778,20 @@ class HeraCorrCM(object):
             "timestamp" : datetime object indicating when the initialization script was called.
         """
         rv = {}
-        for key in self.r.keys():
-            if key.startswith("version:"):
-                newkey = key.lstrip("version:")
-                rv[newkey] = {}
-                x = self.r.hgetall(key)
-                rv[newkey]["version"] = x["version"]
-                rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
+        for key in self.r.scan_iter("version:*"):
+            newkey = key.decode().lstrip("version:")
+            rv[newkey] = {}
+            x = self._hgetall(key)
+            rv[newkey]["version"] = x["version"]
+            rv[newkey]["timestamp"] = dateutil.parser.parse(x["timestamp"])
 
         # Add this package
-        rv[__package__] = {"version": __version__, "timestamp":datetime.datetime.now()}
+        rv[__package__] = {"version": __version__,
+                           "timestamp": datetime.datetime.now()
+                           }
 
         # SNAP init is a special case
-        snap_init = self.r.hgetall("init_configuration")
+        snap_init = self._hgetall("init_configuration")
         rv["snap"] = {}
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]

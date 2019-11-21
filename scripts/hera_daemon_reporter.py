@@ -27,7 +27,7 @@ args = parser.parse_args()
 db = mc.connect_to_mc_db(args)
 
 hostname = socket.gethostname()
-script_redis_key = 'status:script:%s:%s' % (hostname, __file__)
+script_redis_key = 'status:script:{host:s}:{file:s}'.format(host=hostname, file=__file__)
 
 this_daemon = os.path.basename(__file__)
 
@@ -53,7 +53,7 @@ while True:
             r.set(script_redis_key, "alive", ex=MONITORING_INTERVAL*2)
             for daemon in daemons:
                 state = 'errored'
-                for k in r.scan_iter('status:script:*:*%s' % daemon):
+                for k in r.scan_iter('status:script:*:*{daemon:s}'.format(daemon=daemon)):
                     host, daemon_path = k.split(':')[2:]
                     state = 'good'#r[k]
                 try:
