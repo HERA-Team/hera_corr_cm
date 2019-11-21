@@ -15,8 +15,6 @@ SNAP_USER = "hera"
 SNAP_ENVIRONMENT = "~/.venv/bin/activate"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
-DEFAULT_FILE_TIME_MS = 200000
-
 
 class HeraCorrHandler(object):
     def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
@@ -83,6 +81,15 @@ class HeraCorrHandler(object):
         """
         self._stop_capture()
         self.logger.info("Starting correlator")
+        # Hack which assumes that there is a BDA config file
+        # resulting in 4 GPU integrations going in to each
+        # output sample
+        acclen = acclen//4
+
+        # For BDA files, the file length is fixed relative to the
+        # underlying integration rate.
+        # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2 
+        file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 8192/500e6 * 1000
         proc = Popen(["hera_ctl.py",
                       "start",
                       "-n", "{len:d}".format(len=acclen),
@@ -92,12 +99,12 @@ class HeraCorrHandler(object):
         proc.wait()
         # If the duration is less than the default file time, take one file of length duration.
         # Else take files of default size, rounding down the total number of files.
-        if (1000 * duration) < DEFAULT_FILE_TIME_MS:
+        if (1000 * duration) < file_duration_ms:
             file_time_ms = 1000 * duration
             nfiles = 1
         else:
-            file_time_ms = DEFAULT_FILE_TIME_MS
-            nfiles = int((1000. * duration) // DEFAULT_FILE_TIME_MS)
+            file_time_ms = file_duration_ms
+            nfiles = int((1000. * duration) / file_duration_ms)
         self.logger.info("Taking data on {host:s}: "
                          "{nfile:d} files of length "
                          "{len:d} ms".format(host=CATCHER_HOST,
@@ -121,10 +128,8 @@ class HeraCorrHandler(object):
         proc1.wait()
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
-        self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
-        proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
-        self.logger.info("Issuing hera_catcher_up.py")
-        proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
+
+        # For BDA snap_init has to happen first to ensure the antennas in the config file are correct.
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
@@ -160,6 +165,11 @@ class HeraCorrHandler(object):
                            ]
                           )
             proc3.wait()
+
+        self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
+        proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
+        self.logger.info("Issuing hera_catcher_up.py")
+        proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         proc1.wait()
         proc2.wait()
 

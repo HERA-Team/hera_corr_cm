@@ -221,7 +221,7 @@ class HeraCorrCM(object):
             sent_message = self._send_message("record", starttime=starttime, duration=duration, tag=tag, acclen=acclen)
             if sent_message is None:
                 return ERROR
-            response = self._get_response(sent_message, timeout=30)
+            response = self._get_response(sent_message, timeout=120)
             if response is None:
                 return ERROR
             try:
