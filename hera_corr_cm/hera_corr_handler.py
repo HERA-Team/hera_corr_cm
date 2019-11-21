@@ -16,6 +16,9 @@ SNAP_ENVIRONMENT = "~/.venv/bin/activate"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
 
+ERROR = False
+OK = True
+
 class HeraCorrHandler(object):
     def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
         self.logger = logger
@@ -138,6 +141,9 @@ class HeraCorrHandler(object):
                        "hera_snap_feng_init.py",
                        "-P", "-s", "-e", "-i", "--noredistapcp"])
         proc3.wait()
+        if int(proc3.returncode) != 0:
+            self.logger.error("Error running hera_snap_feng_init.py")
+            return ERROR
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
@@ -152,6 +158,9 @@ class HeraCorrHandler(object):
                            ]
                           )
             proc3.wait()
+            if int(proc3.returncode) != 0:
+                self.logger.error("Error running hera_snap_input_power_eq.py")
+                return ERROR
         if output_rms_target is not None:
             self.logger.info("Issuing output balance "
                              "with target {rms:f}".format(rms=output_rms_target)
@@ -165,6 +174,9 @@ class HeraCorrHandler(object):
                            ]
                           )
             proc3.wait()
+            if int(proc3.returncode) != 0:
+                self.logger.error("Error running hera_snap_output_power_eq.py")
+                return ERROR
 
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
         proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
@@ -172,6 +184,7 @@ class HeraCorrHandler(object):
         proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         proc1.wait()
         proc2.wait()
+        return OK
 
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
