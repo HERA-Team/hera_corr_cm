@@ -40,6 +40,7 @@ daemons = [
     'hera_node_keep_alive.py',
     'hera_node_receiver.py',
     'hera_snap_redis_monitor.py',
+    'hera_cmd_handler.py', # SNAP command handler
 ]
 
 
