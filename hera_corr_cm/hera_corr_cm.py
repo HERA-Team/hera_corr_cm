@@ -234,7 +234,7 @@ class HeraCorrCM(object):
                                   )
                 return ERROR
 
-            if time_diff > 100:
+            if time_diff > 250:
                 self.logger.warning("Time difference between "
                                     "commanded and accepted start "
                                     "time is {diff:f}ms".format(diff=time_diff)
