@@ -1,3 +1,4 @@
+"""Handler for correlator for M&C."""
 from __future__ import print_function
 
 import logging
@@ -5,7 +6,7 @@ import redis
 import time
 import json
 
-from subprocess import Popen, PIPE
+from subprocess import Popen
 from . import helpers
 from .hera_corr_cm import HeraCorrCM
 
@@ -19,8 +20,14 @@ X_PIPES = 2
 ERROR = False
 OK = True
 
+
 class HeraCorrHandler(object):
-    def __init__(self, redishost="redishost", logger=helpers.add_default_log_handlers(logging.getLogger(__name__)), testmode=False):
+    """Correlator Handler."""
+
+    def __init__(self, redishost="redishost",
+                 logger=helpers.add_default_log_handlers(logging.getLogger(__name__)),
+                 testmode=False):
+        """Initialize heracorrhandler."""
         self.logger = logger
         self.redishost = redishost
         self.testmode = testmode
@@ -32,6 +39,7 @@ class HeraCorrHandler(object):
         self.cmd_chan.get_message(timeout=0.1)
 
     def process_command(self):
+        """Pass command to handler."""
         message = self.cmd_chan.get_message(timeout=5)
         if message is not None:
             self._cmd_handler(message["data"])
@@ -41,41 +49,39 @@ class HeraCorrHandler(object):
                         "time": time,
                         "args": kwargs
                         }
-        n = self.r.publish("corr:response", json.dumps(message_dict))
+        n = self.r.publish("corr:response", json.dumps(message_dict))  # noqa
 
     def _gpu_is_on(self):
-        """
-        Returns True if GPUSTAT is "on" for the all nodes
-        """
+        """Return True if GPUSTAT is "on" for the all nodes."""
         on = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                on = on and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "INTSTAT") == "on"
+                on = on and self.r.hget("hashpipe://{host}/{pipe:d}/status"
+                                        .format(host=host, pipe=pipe), "INTSTAT") == "on"
         return on
 
     def _gpu_is_off(self):
-        """
-        Returns True if GPUSTAT is "off" for the all nodes
-        """
+        """Return True if GPUSTAT is "off" for the all nodes."""
         off = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                off = off and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "INTSTAT") == "off"
+                off = off and self.r.hget("hashpipe://{host}/{pipe:d}/status"
+                                          .format(host=host, pipe=pipe), "INTSTAT") == "off"
         return off
 
     def _outthread_is_blocked(self):
-        """
-        Returns True if OUTSTAT is "blocked" for the all nodes
-        """
+        """Return True if OUTSTAT is "blocked" for the all nodes."""
         blocked = True
         for host in X_HOSTS:
             for pipe in range(X_PIPES):
-                blocked = blocked and self.r.hget("hashpipe://{host}/{pipe:d}/status".format(host=host, pipe=pipe), "OUTSTAT") == "blocked"
+                blocked = blocked and self.r.hget("hashpipe://{host}/{pipe:d}/status"
+                                                  .format(host=host, pipe=pipe), "OUTSTAT") == "blocked"  # noqa
         return blocked
 
     def _start_capture(self, starttime, duration, acclen, tag):
         """
         Start data capture. First issues a stop, and waits 20 seconds.
+
         args:
             starttime: UNIX time for start trigger in ms
             duration: Number of seconds to record for
@@ -91,7 +97,7 @@ class HeraCorrHandler(object):
 
         # For BDA files, the file length is fixed relative to the
         # underlying integration rate.
-        # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2 
+        # duration = Nt_per_file * Nsamp_bda * acclen * time_demux * 2
         file_duration_ms = 2 * 2 * (acclen * 2) * X_PIPES * 2 * 8192/500e6 * 1000
         file_duration_ms = int(file_duration_ms)
         proc = Popen(["hera_ctl.py",
@@ -132,8 +138,11 @@ class HeraCorrHandler(object):
         proc1.wait()
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
+        """Initialize f-engines.
 
-        # For BDA snap_init has to happen first to ensure the antennas in the config file are correct.
+        For BDA snap_init has to happen first to ensure the antennas in
+        the config file are correct.
+        """
         self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),

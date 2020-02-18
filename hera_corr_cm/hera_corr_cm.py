@@ -1,3 +1,4 @@
+"""HERA CM class."""
 from __future__ import print_function
 
 import time
@@ -22,10 +23,11 @@ LOGGER = add_default_log_handlers(logging.getLogger(__name__))
 
 class HeraCorrCM(object):
     """
-    A class to encapsulate an interface to
-    the HERA correlator (i.e., SNAP boards,
-    and X-engines) via a redis message store.
+    Encapsulate an interface to the HERA correlator.
+
+    Enable control of SNAP boards, and X-engines via a redis message store.
     """
+
     # A class-wide variable to hold redis connections.
     # This prevents multiple instances of HeraCorrCM
     # from creating lots and lots (and lots) of redis connections
@@ -34,8 +36,7 @@ class HeraCorrCM(object):
 
     def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
         """
-        Create a connection to the correlator
-        via a redis server.
+        Create a connection to the correlator via a redis server.
 
         Args:
             redishost (str): The hostname of the machine
@@ -45,7 +46,8 @@ class HeraCorrCM(object):
                 the class will instantiate its own.
             include_fpga (Boolean): If True, instantiate a connection to HERA
                 F-engines.
-            danger_mode (Boolean): If True, disables the only-allow-command-when-not-observing checks.
+            danger_mode (Boolean): If True, disables the
+                                   only-allow-command-when-not-observing checks.
         """
         self.logger = logger
         self.danger_mode = danger_mode
@@ -60,14 +62,13 @@ class HeraCorrCM(object):
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
             self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
             self.response_channels[redishost].subscribe("corr:response")
-            self.response_channels[redishost].get_message(timeout=0.1)  # flush "I've just subscribed" message
+            self.response_channels[redishost].get_message(timeout=0.1)  # flush "I've just subscribed" message  # noqa
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
 
     def _get_response(self, command, timeout=10):
         """
-        Get the correlator's response to `command` issued
-        at `time`.
+        Get the correlator's response to `command` issued at `time`.
 
         Args:
             command: The command (JSON string) issued to the correlator.
@@ -101,8 +102,7 @@ class HeraCorrCM(object):
 
     def _send_message(self, command, **kwargs):
         """
-        Send a command to the correlator via the corr:message
-        pub-sub channel
+        Send a command to the correlator via the corr:message pub-sub channel.
 
         Args:
             command: correlator command
@@ -125,6 +125,8 @@ class HeraCorrCM(object):
 
     def is_recording(self):
         """
+        Check if recording.
+
         Returns: recording_state, UNIX time of last state change (float)
         recording_state is True if the correlator is currently taking data.
 
@@ -139,18 +141,14 @@ class HeraCorrCM(object):
             return x["state"] == "True", float(x["time"])
 
     def _conv_float(self, v):
-        """
-        Try and convert v into a float. If we can't, return None.
-        """
+        """Try and convert v into a float. If we can't, return None."""
         try:
             return float(v)
         except ValueError:
             return None
 
     def _conv_int(self, v):
-        """
-        Try and convert v into an int. If we can't, return None.
-        """
+        """Try and convert v into an int. If we can't, return None."""
         try:
             return int(v)
         except ValueError:
@@ -158,6 +156,8 @@ class HeraCorrCM(object):
 
     def next_start_time(self):
         """
+        Return next start time.
+
         Return the last trigger time (as a UNIX timestamp float) sent to the correlator.
         If this is in the future, the correlator is waiting to start taking data.
         If no valid timestamp exists, return 0.
@@ -180,15 +180,11 @@ class HeraCorrCM(object):
             return True
 
     def secs_to_n_spectra(self, secs):
-        """
-        Return the number of spectra in a given interval of `secs` seconds.
-        """
+        """Return the number of spectra in a given interval of `secs` seconds."""
         return secs / ((2.0 * N_CHAN) / SAMPLE_RATE)
 
     def n_spectra_to_secs(self, n):
-        """
-        Return the time interval in seconds corresponding to `n` spectra.
-        """
+        """Return the time interval in seconds corresponding to `n` spectra."""
         return n * ((2.0 * N_CHAN) / SAMPLE_RATE)
 
     def take_data(self, starttime, duration, acclen, tag=None):
@@ -218,7 +214,8 @@ class HeraCorrCM(object):
             self.logger.error("Cannot start correlator -- it is already taking data")
             return ERROR
         else:
-            sent_message = self._send_message("record", starttime=starttime, duration=duration, tag=tag, acclen=acclen)
+            sent_message = self._send_message("record", starttime=starttime,
+                                              duration=duration, tag=tag, acclen=acclen)
             if sent_message is None:
                 return ERROR
             response = self._get_response(sent_message, timeout=120)
@@ -248,9 +245,7 @@ class HeraCorrCM(object):
             return response["starttime"]
 
     def stop_taking_data(self):
-        """
-        Stop the correlator data collection process.
-        """
+        """Stop the correlator data collection process."""
         sent_message = self._send_message("stop")
         if sent_message is None:
             return ERROR
@@ -261,7 +256,8 @@ class HeraCorrCM(object):
 
     def phase_switch_disable(self, timeout=10):
         """
-        Disables phase switching.
+        Disable phase switching.
+
         Blocked if the correlator is recording.
         """
         if not self._require_not_recording():
@@ -278,8 +274,9 @@ class HeraCorrCM(object):
 
     def phase_switch_enable(self):
         """
-        Enables phase switching. Uses phase switch
-        settings in the correlator active configuration.
+        Enable phase switching.
+
+        Uses phase switch settings in the correlator active configuration.
         Blocked if the correlator is recording.
         """
         if not self._require_not_recording():
@@ -296,6 +293,8 @@ class HeraCorrCM(object):
 
     def phase_switch_is_on(self):
         """
+        Check phase switch state.
+
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if phase switching is on. Else False.
         """
@@ -304,8 +303,9 @@ class HeraCorrCM(object):
 
     def update_config(self, configfile):
         """
-        Updates the correlator configuration, which defines
-        low level set up parameters such as walshing functions,
+        Update the correlator configuration.
+
+        Defines low level set up parameters such as walshing functions,
         IP addresses, band selection, etc.
 
         Args:
@@ -314,13 +314,15 @@ class HeraCorrCM(object):
         """
         with open(configfile, "r") as fh:
             upload_time = time.time()
-            self.r.hmset("snap_configuration", {"config": fh.read(), "upload_time": upload_time, "upload_time_str": time.ctime(upload_time)})
+            self.r.hmset("snap_configuration", {"config": fh.read(), "upload_time": upload_time,
+                         "upload_time_str": time.ctime(upload_time)})
 
     def get_config(self):
         """
-        Get the currently loaded configuration, as a
-        processed yaml string.
-        Returns: last update time (UNIX timestamp float), Configuration structure, configuration hash
+        Get the currently loaded configuration, as a processed yaml string.
+
+        Returns: last update time (UNIX timestamp float), Configuration structure,
+        configuration hash
         """
         config = self.r.hget("snap_configuration", "config")
         config_time = self.r.hget("snap_configuration", "upload_time")
@@ -329,9 +331,10 @@ class HeraCorrCM(object):
 
     def restart(self):
         """
-        Restart (power cycle) the correlator, returning it to the settings
-        in the current configuration. Will reset ADC delay calibrations.
-        Returns OK or ERROR
+        Restart (power cycle) the correlator.
+
+        Returning it to the settings in the current configuration. Will reset ADC
+        delay calibrations.  Returns OK or ERROR
         """
         stop_stat = self._stop()
         start_stat = self._start()
@@ -341,9 +344,7 @@ class HeraCorrCM(object):
             return ERROR
 
     def _stop(self):
-        """
-        Stop the X-Engines and data catcher.
-        """
+        """Stop the X-Engines and data catcher."""
         self.logger.info("Issuing Hard Stop command")
         # Try and be gracious
         self.stop_taking_data()
@@ -361,9 +362,7 @@ class HeraCorrCM(object):
         return OK
 
     def _start(self):
-        """
-        Start the X-Engines and data catcher.
-        """
+        """Start the X-Engines and data catcher."""
         self.logger.info("Issuing Hard Start command")
         sent_message = self._send_message("start")
         if sent_message is None:
@@ -375,7 +374,9 @@ class HeraCorrCM(object):
 
     def antenna_enable(self, ant=None):
         """
-        Enables antenna state. Used to turn off noise diode and load.
+        Enable antenna state.
+
+        Used to turn off noise diode and load.
         inputs:
             ant (integer): HERA antenna number to switch to antenna. Set to None for all antennas.
         returns:
@@ -402,8 +403,10 @@ class HeraCorrCM(object):
     def noise_diode_enable(self, ant=None):
         """
         Enable FEM noise diodes.
+
         inputs:
-            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+            ant (integer): HERA antenna number to switch to noise. Set to None to
+                           switch all antennas.
         returns:
             ERROR or OK
         """
@@ -428,8 +431,10 @@ class HeraCorrCM(object):
     def noise_diode_disable(self, ant=None):
         """
         Disable FEM noise diodes.
+
         inputs:
-            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+            ant (integer): HERA antenna number to switch to noise. Set to None to
+                           switch all antennas.
         returns:
             ERROR or OK
         """
@@ -438,8 +443,10 @@ class HeraCorrCM(object):
     def load_enable(self, ant=None):
         """
         Enable FEM load terminator.
+
         inputs:
-            ant (integer): HERA antenna number to switch to load. Set to None to switch all antennas.
+            ant (integer): HERA antenna number to switch to load. Set to None to
+                           switch all antennas.
         returns:
             ERROR or OK
         """
@@ -464,8 +471,10 @@ class HeraCorrCM(object):
     def load_disable(self, ant=None):
         """
         Disable FEM load terminator.
+
         inputs:
-            ant (integer): HERA antenna number to switch to noise. Set to None to switch all antennas.
+            ant (integer): HERA antenna number to switch to noise. Set to None to
+                           switch all antennas.
         returns:
             ERROR or OK
         """
@@ -473,6 +482,8 @@ class HeraCorrCM(object):
 
     def noise_diode_is_on(self):
         """
+        Return if noise diode is on.
+
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if noise diode is on. Else False.
         """
@@ -481,6 +492,8 @@ class HeraCorrCM(object):
 
     def load_is_on(self):
         """
+        Return if load is on.
+
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if load is on. Else False.
         """
@@ -490,6 +503,7 @@ class HeraCorrCM(object):
     def set_eq_coeffs(self, ant, pol, coeffs):
         """
         Set the gain coefficients for a given feed.
+
         inputs:
             ant (integer): HERA antenna number to query
             pol (string): Polarization to query (must be 'e' or 'n')
@@ -512,6 +526,7 @@ class HeraCorrCM(object):
     def get_eq_coeffs(self, ant, pol):
         """
         Get the currently loaded gain coefficients for a given feed.
+
         inputs:
             ant (integer): HERA antenna number to query
             pol (string): Polarization to query (must be 'e' or 'n')
@@ -520,9 +535,10 @@ class HeraCorrCM(object):
             or ERROR, in the case of a failure
         """
         try:
-            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'.format(ant=ant, pol=pol)).items()}
+            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'
+                                                                           .format(ant=ant, pol=pol)).items()}  # noqa
         except KeyError:
-            self.logger.error("Failed to get antenna coefficients from redis. Does this antenna exist?")
+            self.logger.error("Failed to get antenna coefficients from redis. Does antenna exist?")
             return ERROR
         try:
             t = float(v['time'])
@@ -539,6 +555,7 @@ class HeraCorrCM(object):
     def get_pam_atten(self, ant, pol):
         """
         Get the currently loaded pam attenuation value for a given feed.
+
         inputs:
             ant (integer): HERA antenna number to query
             pol (string): Polarization to query (must be 'e' or 'n')
@@ -561,6 +578,7 @@ class HeraCorrCM(object):
     def set_pam_atten(self, ant, pol, atten):
         """
         Get the currently loaded pam attenuation value for a given feed.
+
         inputs:
             ant (integer): HERA antenna number to query
             pol (string): Polarization to query (must be 'e' or 'n')
@@ -581,15 +599,18 @@ class HeraCorrCM(object):
 
     def get_bit_stats(self):
         """
-        Returns bit statistics from F-engines.
+        Return bit statistics from F-engines.
+
         Different antennas / stats are sampled at different
         times, so each is accompanied by a timestamp.
         """
+        raise NotImplementedError('There is no code here.')
 
     def _get_status_keys(self, stattype):
         """
-        Get a list of keys which exist in redis of the form
-        status:`class`:*, and return a dictionary, keyed by these values,
+        Get a list of keys which exist in redis.
+
+        of the form status:`class`:*, and return a dictionary, keyed by these values,
         each entry of which is a redis HGETALL of this key.
 
         Args:
@@ -609,15 +630,18 @@ class HeraCorrCM(object):
 
     def _hgetall(self, rkey):
         """
-        A wrapper around self.r.hgetall(rkey) which converts (.decode()'s)
-        the keys and values of the resulting byte array to a string.
+        Generate a wrapper around self.r.hgetall(rkey).
+
+        Converts (.decode()'s the keys and values of the resulting byte array to a string.
         """
         return {key.decode(): val.decode() for key, val in self.r.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
-        Returns a dictionary of snap status flags. Keys of returned dictionaries are
-        snap hostnames. Values of this dictionary are status key/val pairs.
+        Return a dictionary of snap status flags.
+
+        Keys of returned dictionaries are snap hostnames. Values of this dictionary are
+        status key/val pairs.
 
         These keys are:
             pmb_alert (bool) : True if SNAP PSU controllers have issued an alert. False otherwise.
@@ -652,8 +676,10 @@ class HeraCorrCM(object):
 
     def get_ant_status(self):
         """
-        Returns a dictionary of antenna status flags. Keys of returned dictionaries are
-        of the form "<antenna number>:"<e|n>". Values of this dictionary are status key/val pairs.
+        Return a dictionary of antenna status flags.
+
+        Keys of returned dictionaries are of the form "<antenna number>:"<e|n>". Values of
+        this dictionary are status key/val pairs.
 
         These keys are:
             adc_mean (float)  : Mean ADC value (in ADC units)
@@ -676,7 +702,7 @@ class HeraCorrCM(object):
             fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
-            histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
+            histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
@@ -720,12 +746,14 @@ class HeraCorrCM(object):
 
     def get_snaprf_status(self):
         """
-        Returns a dictionary of SNAP input stats. Keys of returned dictionaries are
-        of the form "<SNAP hostname>:"<SNAP input number>". Values of this dictionary are status key/val pairs.
+        Return a dictionary of SNAP input stats.
+
+        Keys of returned dictionaries are of the form "<SNAP hostname>:"<SNAP input number>".
+        Values of this dictionary are status key/val pairs.
 
         These keys are:
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
-            histogram (list of ints) : Two-dimensional list: [[bin_centers][counts]] representing ADC histogram
+            histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
@@ -749,18 +777,17 @@ class HeraCorrCM(object):
         return rv
 
     def get_x_status(self):
-        """
-        Returns a dictionary of X-engine status flags.
-        """
+        """Return a dictionary of X-engine status flags."""
+        raise NotImplementedError("No code for get_x_status.")
 
     def get_feed_status(self):
-        """
-        Returns a dictionary of feed sensor values.
-        """
+        """Return a dictionary of feed sensor values."""
+        raise NotImplementedError("No code for get_feed_status.")
 
     def get_version(self):
         """
-        Returns the version of various software modules in dictionary form.
+        Return the version of various software modules in dictionary form.
+
         Keys of this dictionary are software packages, e.g. "hera_corr_cm", or of the form
         <package>:<script> for daemonized processes, e.g. "udpSender:hera_node_receiver.py".
         The values of this dictionary are themselves dicts, with keys:
@@ -796,7 +823,7 @@ class HeraCorrCM(object):
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]
         rv["snap"]["config"] = yaml.load(snap_init["config"], Loader=yaml.FullLoader)
-        rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))
+        rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))  # noqa
         rv["snap"]["config_md5"] = snap_init["md5"]
         rv["snap"]["timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["init_time"]))
 
@@ -805,5 +832,7 @@ class HeraCorrCM(object):
     def run_correlator_test(self):
         """
         Run a correlator test using inbuilt test vector generators.
+
         Will take a few minutes to run. Returns OK or ERROR.
         """
+        raise NotImplementedError("No code in run_correlator_test")
