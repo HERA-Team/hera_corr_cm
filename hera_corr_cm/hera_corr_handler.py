@@ -134,13 +134,13 @@ class HeraCorrHandler(object):
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
 
         # For BDA snap_init has to happen first to ensure the antennas in the config file are correct.
-        self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i")
+        self.logger.info("Issuing hera_snap_feng_init.py -P -s -e -i --noredistapcp --nomultithread")
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
                        "source", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
-                       "-P", "-s", "-e", "-i", "--noredistapcp"])
+                       "-P", "-s", "-e", "-i", "--noredistapcp", "--nomultithread"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
