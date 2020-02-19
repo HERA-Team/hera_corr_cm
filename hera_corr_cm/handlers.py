@@ -19,6 +19,7 @@ logging.addLevelName(NOTIFY, "NOTIFY")
 
 IS_INITIALIZED_ATTR = "_hera_has_default_handlers"
 
+
 class RedisHandler(logging.Handler):
     def __init__(self, channel, conn, *args, **kwargs):
         logging.Handler.__init__(self, *args, **kwargs)
@@ -40,6 +41,7 @@ class RedisHandler(logging.Handler):
         except redis.RedisError:
             pass
 
+
 class HeraMCHandler(logging.Handler):
     def __init__(self, subsystem, *args, **kwargs):
         from hera_mc import mc
@@ -47,21 +49,30 @@ class HeraMCHandler(logging.Handler):
         self.Time = Time
         logging.Handler.__init__(self, *args, **kwargs)
         self.subsystem = subsystem
-        parser = mc.get_mc_argument_parser()
-        args = parser.parse_args()
-        db = mc.connect_to_mc_db(args)
+        db = mc.connect_to_mc_db(None)
         self.session = db.sessionmaker()
 
     def emit(self, record):
-        # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10
-        severity = max(1, 100 // record.levelno)
+        # Re-code level because HeraMC logs 1 as most severe, and python logging
+        # calls critical:50, debug:10
+        severity = max(1, 100 / record.levelno)
         message = self.format(record)
         logtime = self.Time(time.time(), format="unix")
         self.session.add_subsystem_error(logtime, self.subsystem, severity, message)
 
 
+def log_notify(log, message=None):
+    """Nofify upon start."""
+    msg = (message
+           or "{logname} starting on {host}".format(logname=log.name,
+                                                    host=socket.gethostname()
+                                                    )
+           )
+    log.log(NOTIFY, msg)
 
-def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO, bglevel=NOTIFY, include_mc=False, mc_level=logging.WARNING):
+
+def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO,
+                             bglevel=NOTIFY, include_mc=False, mc_level=logging.WARNING):
     if getattr(logger, IS_INITIALIZED_ATTR, False):
         return logger
     setattr(logger, IS_INITIALIZED_ATTR, True)
@@ -87,30 +98,19 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
             mc_handler.setLevel(mc_level)
             mc_handler.setFormatter(formatter)
             logger.addHandler(mc_handler)
-        except:
+        except:  # noqa
             logger.warn("Failed to add HERA MC log handler")
+            logger.exception(sys.exc_info()[0])
 
-    redis_host = redis.Redis(redishostname, socket_timeout=1)
+    redis_host = redis.StrictRedis(redishostname, socket_timeout=1)
     try:
         redis_host.ping()
     except redis.ConnectionError:
-        logger.warn("Couldn't connect to redis server "
-                    "at {host}".format(host=redishostname))
+        logger.warn("Couldn't connect to redis server at {}".format(redishostname))
         return logger
 
     redis_handler = RedisHandler('log-channel', redis_host)
     redis_handler.setLevel(bglevel)
     redis_handler.setFormatter(formatter)
     logger.addHandler(redis_handler)
-
     return logger
-
-
-def log_notify(log, message=None):
-    """Nofify upon start."""
-    msg = (message
-           or "{logname} starting on {host}".format(logname=log.name,
-                                                    host=socket.gethostname()
-                                                    )
-           )
-    log.log(NOTIFY, msg)
