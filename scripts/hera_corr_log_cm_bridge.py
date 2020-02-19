@@ -6,9 +6,9 @@ import argparse
 import logging
 import redis
 import socket
-from hera_corr_cm import helpers
+import json
+from .handlers import add_default_log_handlers
 from hera_mc import mc
-from astropy.time import Time
 
 hostname = socket.gethostname()
 
@@ -18,9 +18,10 @@ logging.addLevelName(logging.INFO+1, "NOTIFY")
 parser = argparse.ArgumentParser(description='Subscribe to the redis-based log stream',
                                  formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument('-r', dest='redishost', type=str, default='redishost',
-                    help ='Host servicing redis requests')
+                    help='Host servicing redis requests')
 parser.add_argument('-l', dest='level', type=str, default="NOTIFY",
-                    help ='Don\'t log messages below this level. Allowed values are {vals:}'.format(vals=allowed_levels))
+                    help='Don\'t log messages below this level. '
+                         'Allowed values are {vals:}'.format(vals=allowed_levels))
 
 args = parser.parse_args()
 
@@ -31,7 +32,7 @@ if args.level not in allowed_levels:
 else:
     level = logging.getLevelName(args.level)
 
-logger = helpers.add_default_log_handlers(logging.getLogger(__file__))
+logger = add_default_log_handlers(logging.getLogger(__file__))
 
 print('Connecting to redis server {host:s}'.format(host=args.redishost))
 r = redis.Redis(args.redishost)

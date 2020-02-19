@@ -8,11 +8,6 @@ import redis
 import json
 import socket
 
-'''
-A Redis-based log handler from:
-http://charlesleifer.com/blog/using-redis-pub-sub-and-irc-for-error-logging-with-python/
-'''
-
 logger = logging.getLogger(__name__)
 NOTIFY = logging.INFO + 1
 logging.addLevelName(NOTIFY, "NOTIFY")
@@ -21,6 +16,12 @@ IS_INITIALIZED_ATTR = "_hera_has_default_handlers"
 
 
 class RedisHandler(logging.Handler):
+    """
+    Redis-based log handler.
+
+    http://charlesleifer.com/blog/using-redis-pub-sub-and-irc-for-error-logging-with-python/
+    """
+
     def __init__(self, channel, conn, *args, **kwargs):
         logging.Handler.__init__(self, *args, **kwargs)
         self.channel = channel
