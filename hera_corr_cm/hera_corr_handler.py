@@ -144,6 +144,11 @@ class HeraCorrHandler(object):
         the config file are correct.
         """
         self.logger.info("Issuing hera_snap_feng_init.py -p -s -e -i --noredistapcp --nomultithread")
+        # -p (not -P) to allow booted snaps to remain without reprogramming
+        #    this makes a second call after a partial boot more likely to work.
+        # -s is synchronize
+        # --noredistapcp bypasses redis for some programming traffic to avoid a throughput bottleneck
+        # --nomultithread boots snaps one at a time to avoid a rush on redis traffic also
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
                        "source", SNAP_ENVIRONMENT,
