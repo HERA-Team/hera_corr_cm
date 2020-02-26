@@ -173,7 +173,6 @@ class HeraCorrHandler(object):
             self.logger.error("Error running hera_snap_feng_init.py -s")
             return ERROR
         if input_power_target is not None:
-        if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
                              )
