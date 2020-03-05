@@ -356,7 +356,7 @@ class HeraCorrCM(object):
         sent_message = self._send_message("hard_stop")
         if sent_message is None:
             return ERROR
-        response = self._get_response(sent_message, timeout=120)
+        response = self._get_response(sent_message, timeout=300)
         if response is None:
             return ERROR
         return OK
@@ -367,7 +367,7 @@ class HeraCorrCM(object):
         sent_message = self._send_message("start")
         if sent_message is None:
             return ERROR
-        response = self._get_response(sent_message, timeout=300)
+        response = self._get_response(sent_message, timeout=1200)
         if response is None:
             return ERROR
         return OK
