@@ -41,17 +41,17 @@ class HeraCorrHandler(object):
     def process_command(self):
         """Pass command to handler."""
         message = self.r.get("corr:command")
-
-        command_time = float(json.loads(message)["time"])
-        if self.last_command_time is not None:
-            if command_time > self.last_command_time:
+        if message is not None:
+            command_time = float(json.loads(message)["time"])
+            if self.last_command_time is not None:
+                if command_time > self.last_command_time:
+                    self.last_command_time = command_time
+                    self._cmd_handler(message)
+                else:
+                    return
+            else:
                 self.last_command_time = command_time
                 self._cmd_handler(message)
-            else:
-                return
-        else:
-            self.last_command_time = command_time
-            self._cmd_handler(message)
 
         return
 
