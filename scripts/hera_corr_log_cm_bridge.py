@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import argparse
 import logging
 import redis
 import socket
 import json
-from .handlers import add_default_log_handlers
+from hera_corr_cm.handlers import add_default_log_handlers
 from hera_mc import mc
 
 hostname = socket.gethostname()

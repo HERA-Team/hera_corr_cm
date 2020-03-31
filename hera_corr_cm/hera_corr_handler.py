@@ -1,5 +1,5 @@
 """Handler for correlator for M&C."""
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import logging
 import redis
@@ -50,8 +50,9 @@ class HeraCorrHandler(object):
                 else:
                     return
             else:
+                # The daemon has probably been restarted.
+                # Do no execure the last command but log execution time
                 self.last_command_time = command_time
-                self._cmd_handler(message)
 
         return
 
