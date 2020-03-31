@@ -10,6 +10,7 @@ import numpy as np
 from astropy.coordinates import EarthLocation
 import astropy.units as u
 
+
 logger = logging.getLogger(__name__)
 NOTIFY = logging.INFO + 1
 logging.addLevelName(NOTIFY, "NOTIFY")
@@ -49,6 +50,24 @@ def hera_antpol_to_ant_pol(antpol):
     return ant, pol
 
 
+def get_snaps_from_redis():
+    """Read SNAPs from redis - from CM, config and correlator viewpoints."""
+    import yaml
+
+    r = redis.Redis('redishost')
+    snaps_cm_list = list(json.loads(r.hget('corr:map', 'all_snap_inputs')).keys())
+    snap_to_host = json.loads(r.hget('corr:map', 'snap_host'))
+    snaps = {'cm': [], 'cfg': [], 'corr': []}
+    for snap in snaps_cm_list:
+        try:
+            snaps['cm'].append(snap_to_host[snap])
+        except KeyError:
+            continue
+    snaps['cfg'] = list(yaml.safe_load(r.hget('init_configuration', 'config'))['fengines'].keys())
+    snaps['corr'] = list(r.hgetall('corr:snap_ants').keys())
+    return snaps
+
+
 def read_maps_from_redis(redishost='redishost'):
     """Read subset of corr:map."""
     if isinstance(redishost, str):
@@ -62,16 +81,21 @@ def read_maps_from_redis(redishost='redishost'):
     return x
 
 
-def read_cminfo_from_redis(redishost='redishost', return_namespace=False):
+def read_cminfo_from_redis(return_as, redishost='redishost'):
     """
     Read location information from redis.
 
+    This is a redis replacement for the cminfo methods that used hera_mc.  For
+    "drop-in" replacement in how it gets used in various places there are two
+    different return options per the "return_as" parameter.
+
     Parameters
     ----------
+    return_as : str
+                If return_as 'dict': returns dict as per old cminfo
+                If return_as 'namespace':  returns as a Namespace for other places
     redishost : str
                 Name of redis host.
-    return_namespace : bool
-                If True, will rewrite dict to Namespace, converting/adding a few things.
 
     Returns
     -------
@@ -93,7 +117,7 @@ def read_cminfo_from_redis(redishost='redishost', return_namespace=False):
     cminfo['cofa_Y'] = cofa_xyz[1]
     cminfo['cofa_Z'] = cofa_xyz[2]
 
-    if not return_namespace:
+    if not return_as.lower().startswith('d'):
         return cminfo
 
     from argparse import Namespace
