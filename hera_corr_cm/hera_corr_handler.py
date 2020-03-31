@@ -7,7 +7,7 @@ import time
 import json
 
 from subprocess import Popen
-from . import helpers
+from .handlers import add_default_log_handlers
 from .hera_corr_cm import HeraCorrCM
 
 CATCHER_HOST = "hera-sn1"
@@ -25,7 +25,7 @@ class HeraCorrHandler(object):
     """Correlator Handler."""
 
     def __init__(self, redishost="redishost",
-                 logger=helpers.add_default_log_handlers(logging.getLogger(__name__)),
+                 logger=add_default_log_handlers(logging.getLogger(__name__)),
                  testmode=False):
         """Initialize heracorrhandler."""
         self.logger = logger

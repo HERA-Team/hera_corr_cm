@@ -1,4 +1,4 @@
-"""HERA CM class."""
+"""HERA MC class."""
 from __future__ import print_function
 
 import time
@@ -9,7 +9,7 @@ import json
 import dateutil.parser
 import datetime
 import numpy as np
-from .helpers import add_default_log_handlers
+from .handlers import add_default_log_handlers
 from . import __package__, __version__
 
 OK = True
