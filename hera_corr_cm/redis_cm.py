@@ -1,5 +1,6 @@
 """Redis functions for CM data."""
 
+import sys
 import logging
 import logging.handlers
 import time
@@ -9,6 +10,12 @@ import socket
 import numpy as np
 from astropy.coordinates import EarthLocation
 import astropy.units as u
+
+# this is identical to six.string_type but we don't want six dependence
+if sys.version_info.major > 2:
+    string_type = str
+else:
+    string_type = basestring
 
 
 logger = logging.getLogger(__name__)
@@ -101,6 +108,16 @@ def read_cminfo_from_redis(return_as, redishost='redishost'):
     -------
     dict (or Namespace) of cminfo
     """
+    if not isinstance(return_as, string_type):
+        raise ValueError(
+            "Input return_as must be a string type."
+        )
+
+    if return_as.lower() not in ["dict", "dictionary", "namespace"]:
+        return ValueError(
+            "Input return_as must be one of {}".format(["dict", "dictionary", "namespace"])
+        )
+
     cminfo = {'antenna_numbers': None, 'antenna_names': None,               # Make identical to cminfo  # noqa
               'antenna_positions': None, 'antenna_alts': None,              # returned by hera_mc
               'antenna_utm_eastings': None, 'antenna_utm_northings': None,  # These are same keys
@@ -117,7 +134,7 @@ def read_cminfo_from_redis(return_as, redishost='redishost'):
     cminfo['cofa_Y'] = cofa_xyz[1]
     cminfo['cofa_Z'] = cofa_xyz[2]
 
-    if not return_as.lower().startswith('d'):
+    if not return_as.lower().startswith('dict'):
         return cminfo
 
     from argparse import Namespace
