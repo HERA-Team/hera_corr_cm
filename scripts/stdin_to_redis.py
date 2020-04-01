@@ -17,7 +17,9 @@ def main():
                         help ='Channel to which stdin should be published.')
     args = parser.parse_args()
 
-    r = redis.Redis(args.redishost, decode_responses=True)
+    connection_pool = redis.ConnectionPool(host=args.redishost, decode_responses=True)
+    r = redis.Redis(connection_pool=connection_pool)
+
 
     # Get this machines hostname to prepend to the log message
     myhost = socket.gethostname()
