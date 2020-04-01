@@ -30,7 +30,8 @@ class HeraCorrHandler(object):
         self.testmode = testmode
 
         self.cm = HeraCorrCM(redishost=self.redishost, include_fpga=False)
-        self.r = redis.Redis(self.redishost, decode_responses=True)
+        self.connection_pool = redis.ConnectionPool(host=self.redishost, decode_responses=True)
+        self.r = redis.Redis(connection_pool=self.connection_pool)
 
         # store the last time a command was received in unix time in seconds
         self.last_command_time = None
