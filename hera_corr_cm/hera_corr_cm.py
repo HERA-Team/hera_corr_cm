@@ -35,6 +35,7 @@ class HeraCorrCM(object):
     # This prevents multiple instances of HeraCorrCM
     # from creating lots and lots (and lots) of redis connections
     redis_connections = {}
+    connection_pool = {}
 
     def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
         """
@@ -61,7 +62,8 @@ class HeraCorrCM(object):
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
         if redishost not in list(self.redis_connections.keys()):
-            self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100, decode_responses=True)
+            self.connection_pool[redishost] = redis.ConnectionPool(host=redishost)
+            self.redis_connections[redishost] = redis.Redis(connection_pool=self.connection_pool[redishost], max_connections=100)
         self.r = self.redis_connections[redishost]
 
     def _get_response(self, command, timeout=None):
