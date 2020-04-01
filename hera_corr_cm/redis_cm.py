@@ -107,6 +107,7 @@ def read_cminfo_from_redis(return_as, redishost='redishost'):
     Returns
     -------
     dict (or Namespace) of cminfo
+
     """
     if not isinstance(return_as, string_type):
         raise ValueError(
@@ -118,42 +119,33 @@ def read_cminfo_from_redis(return_as, redishost='redishost'):
             "Input return_as must be one of {}".format(["dict", "dictionary", "namespace"])
         )
 
-    cminfo = {'antenna_numbers': None, 'antenna_names': None,               # Make identical to cminfo  # noqa
-              'antenna_positions': None, 'antenna_alts': None,              # returned by hera_mc
-              'antenna_utm_eastings': None, 'antenna_utm_northings': None,  # These are same keys
-              'correlator_inputs': None, 'cm_version': None}
-    redishost = redis.Redis('redishost')
-    for k in cminfo.keys():
-        cminfo[k] = json.loads(redishost.hget('corr:map', k))
-    cofa_info = json.loads(redishost.hget('corr:map', 'cofa'))
-    cminfo['cofa_lat'] = cofa_info['lat']
-    cminfo['cofa_lon'] = cofa_info['lon']
-    cminfo['cofa_alt'] = cofa_info['alt']
-    cofa_xyz = json.loads(redishost.hget('corr:map', 'cofa_xyz'))
-    cminfo['cofa_X'] = cofa_xyz[0]
-    cminfo['cofa_Y'] = cofa_xyz[1]
-    cminfo['cofa_Z'] = cofa_xyz[2]
+    cminfo = {}
 
-    if not return_as.lower().startswith('dict'):
+    redis_pool = redis.ConnectionPool(host=redishost)
+    redishost = redis.Redis(connection_pool=redis_pool)
+
+    cminfo_redis = redishost.hgetall("cminfo")
+
+    for k in cminfo_redis.keys():
+        cminfo[k] = json.loads(cminfo_redis[k])
+
+    # return if dictionary tpye was desired
+    if return_as.lower().startswith('dict'):
         return cminfo
 
     from argparse import Namespace
+
     loc = Namespace()
     for key, val in cminfo.items():
         setattr(loc, key, val)
-    loc.COFA_telescope_location = [cofa_xyz['X'], cofa_xyz['Y'], cofa_xyz['Z']]
-    loc.cofa_info = cofa_info
-    loc.observatory = EarthLocation(lat=loc.cofa_info['lat']*u.degree,
-                                    lon=loc.cofa_info['lon']*u.degree,
-                                    height=loc.cofa_info['alt']*u.m)
+
+    loc.observatory = EarthLocation(
+        lat=loc.cofa_lat * u.degree,
+        lon=loc.cofa_lon * u.degree,
+        height=loc.cofa_alt * u.m
+    )
     loc.antenna_numbers = np.array(loc.antenna_numbers).astype(int)
     loc.antenna_names = np.asarray([str(a) for a in loc.antenna_names])
     loc.number_of_antennas = len(loc.antenna_numbers)
-    # Compute uvw for baselines
-    loc.all_antennas_enu = {}
-    for i, antnum in enumerate(loc.antenna_numbers):
-        ant_enu = (cminfo['antenna_utm_eastings'][i],
-                   cminfo['antenna_utm_northings'][i],
-                   cminfo['antenna_alts'][i])
-        loc.all_antennas_enu[antnum] = np.array(ant_enu)
+
     return loc
