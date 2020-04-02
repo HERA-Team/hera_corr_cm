@@ -62,7 +62,7 @@ class HeraMCHandler(logging.Handler):
             "message": self.format(record),
             "logtime": self.Time.now().unix,
         }
-        self.redis_conn.publish(self.channel, json.dups(record_dict))
+        self.redis_conn.publish(self.channel, json.dumps(record_dict))
 
 
 def log_notify(log, message=None):
