@@ -1,5 +1,5 @@
 """Handler for correlator for M&C."""
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import logging
 import redis
@@ -34,15 +34,27 @@ class HeraCorrHandler(object):
 
         self.cm = HeraCorrCM(redishost=self.redishost, include_fpga=False)
         self.r = redis.Redis(self.redishost)
-        self.cmd_chan = self.r.pubsub()
-        self.cmd_chan.subscribe("corr:message")
-        self.cmd_chan.get_message(timeout=0.1)
+
+        # store the last time a command was received in unix time in seconds
+        self.last_command_time = None
 
     def process_command(self):
         """Pass command to handler."""
-        message = self.cmd_chan.get_message(timeout=5)
+        message = self.r.get("corr:command")
         if message is not None:
-            self._cmd_handler(message["data"])
+            command_time = float(json.loads(message)["time"])
+            if self.last_command_time is not None:
+                if command_time > self.last_command_time:
+                    self.last_command_time = command_time
+                    self._cmd_handler(message)
+                else:
+                    return
+            else:
+                # The daemon has probably been restarted.
+                # Do no execure the last command but log execution time
+                self.last_command_time = command_time
+
+        return
 
     def _send_response(self, command, time, **kwargs):
         message_dict = {"command": command,

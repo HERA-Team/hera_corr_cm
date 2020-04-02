@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import argparse
 import logging
 import redis
 import socket
 import json
-from .handlers import add_default_log_handlers
+from hera_corr_cm.handlers import add_default_log_handlers
 from hera_mc import mc
+from astropy.time import Time
 
 hostname = socket.gethostname()
 
@@ -55,7 +56,7 @@ while(True):
             try:
                 decoded = json.loads(mess["data"])
                 msg = decoded['formatted']
-                logtime = self.Time(time.time(), format="unix")
+                logtime = Time.now()
                 msg_level = decoded['levelno']
                 if msg_level >= level:
                     # Re-code level because HeraMC logs 1 as most severe, and python logging calls critical:50, debug:10

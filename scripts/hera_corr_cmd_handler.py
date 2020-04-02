@@ -7,7 +7,7 @@ if __name__ == "__main__":
     from hera_corr_cm.hera_corr_handler import HeraCorrHandler
 
     parser = argparse.ArgumentParser(description='Process commands from the '
-                                                 'corr:message redis channel.',
+                                                 'corr:command redis key.',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('-r', dest='redishost', type=str, default='redishost',
                         help='Hostname of redis server')

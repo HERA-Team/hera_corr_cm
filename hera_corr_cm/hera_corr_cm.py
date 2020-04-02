@@ -1,5 +1,5 @@
 """HERA MC class."""
-from __future__ import print_function
+from __future__ import print_function, absolute_import
 
 import time
 import redis
@@ -102,7 +102,7 @@ class HeraCorrCM(object):
 
     def _send_message(self, command, **kwargs):
         """
-        Send a command to the correlator via the corr:message pub-sub channel.
+        Send a command to the correlator via the corr:command key in redis.
 
         Args:
             command: correlator command
@@ -114,14 +114,9 @@ class HeraCorrCM(object):
         message = json.dumps({"command": command,
                               "time": time.time(),
                               "args": kwargs})
-        listeners = self.r.publish("corr:message", message)
-        if listeners == 0:
-            self.logger.error("Sent command {cmd} "
-                              "but no-one is listening!".format(cmd=command)
-                              )
-            return None
-        else:
-            return message
+        self.r.set("corr:command", message)
+
+        return message
 
     def is_recording(self):
         """
