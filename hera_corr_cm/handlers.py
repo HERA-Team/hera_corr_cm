@@ -3,7 +3,6 @@ from __future__ import print_function
 import logging
 import logging.handlers
 import sys
-import time
 import redis
 import json
 import socket
@@ -44,22 +43,26 @@ class RedisHandler(logging.Handler):
 
 
 class HeraMCHandler(logging.Handler):
-    def __init__(self, subsystem, *args, **kwargs):
-        from hera_mc import mc
+    def __init__(self, subsystem, channel, conn, *args, **kwargs):
         from astropy.time import Time
         self.Time = Time
         logging.Handler.__init__(self, *args, **kwargs)
         self.subsystem = subsystem
-        db = mc.connect_to_mc_db(None)
-        self.session = db.sessionmaker()
+        self.channel = channel
+        self.redis_conn = conn
 
     def emit(self, record):
         # Re-code level because HeraMC logs 1 as most severe, and python logging
         # calls critical:50, debug:10
-        severity = max(1, 100 / record.levelno)
-        message = self.format(record)
-        logtime = self.Time(time.time(), format="unix")
-        self.session.add_subsystem_error(logtime, self.subsystem, severity, message)
+        severity = max(1, 100 // record.levelno)
+        record_dict = {
+            "subsystem": self.subsystem,
+            "levelno": record.levelno,
+            "severity": severity,
+            "message": self.format(record),
+            "logtime": self.Time.now().unix,
+        }
+        self.redis_conn.publish(self.channel, json.dups(record_dict))
 
 
 def log_notify(log, message=None):
@@ -73,7 +76,7 @@ def log_notify(log, message=None):
 
 
 def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.INFO,
-                             bglevel=NOTIFY, include_mc=False, mc_level=logging.WARNING):
+                             bglevel=NOTIFY, include_mc=True, mc_level=logging.WARNING):
     if getattr(logger, IS_INITIALIZED_ATTR, False):
         return logger
     setattr(logger, IS_INITIALIZED_ATTR, True)
@@ -93,16 +96,6 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     syslog_handler.setFormatter(formatter)
     logger.addHandler(syslog_handler)
 
-    if include_mc:
-        try:
-            mc_handler = HeraMCHandler("correlator")
-            mc_handler.setLevel(mc_level)
-            mc_handler.setFormatter(formatter)
-            logger.addHandler(mc_handler)
-        except:  # noqa
-            logger.warn("Failed to add HERA MC log handler")
-            logger.exception(sys.exc_info()[0])
-
     redis_host = redis.StrictRedis(redishostname, socket_timeout=1)
     try:
         redis_host.ping()
@@ -114,4 +107,11 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     redis_handler.setLevel(bglevel)
     redis_handler.setFormatter(formatter)
     logger.addHandler(redis_handler)
+
+    if include_mc:
+        mc_handler = HeraMCHandler("correlator", "mc-log-channel", redis_host)
+        mc_handler.setLevel(mc_level)
+        mc_handler.setFormatter(formatter)
+        logger.addHandler(mc_handler)
+
     return logger
