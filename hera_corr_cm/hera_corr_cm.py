@@ -113,7 +113,9 @@ class HeraCorrCM(object):
                     else:
                         continue
                 elif command_status["status"] == "errored":
-                    self.logger.info("Command errored on execution.")
+                    self.logger.error("Command {} errored on execution.".format(target_cmd))
+                    if "err" in command_status["args"]:
+                        self.logger.error(command_status["err"])
                     return
                 elif command_status["status"] == "complete":
                     return command_status["args"]
@@ -409,9 +411,6 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
-            return ERROR
         if (ant is not None) or (not self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
             return OK
         return ERROR
@@ -436,9 +435,6 @@ class HeraCorrCM(object):
             return ERROR
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
             return ERROR
         if (ant is not None) or (self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
             return OK
@@ -476,9 +472,6 @@ class HeraCorrCM(object):
             return ERROR
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
             return ERROR
         if (ant is not None) or (self.load_is_on()[0] and not self.noise_diode_is_on()[0]):
             return OK
@@ -534,9 +527,6 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
-            return ERROR
         return OK
 
     def get_eq_coeffs(self, ant, pol):
@@ -584,9 +574,6 @@ class HeraCorrCM(object):
         response = self._get_response(sent_message)
         if response is None:
             return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
-            return ERROR
         if "val" not in response:
             return ERROR
         return response["val"]
@@ -607,9 +594,6 @@ class HeraCorrCM(object):
             return ERROR
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        if "err" in response:
-            self.logger.error(response["err"])
             return ERROR
         return OK
 
