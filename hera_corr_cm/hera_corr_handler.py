@@ -60,7 +60,7 @@ class HeraCorrHandler(object):
         command_status = {
             "command": command,
             "time": time,
-            "args": kwargs,
+            "args": json.dumps(kwargs),
             "status": status,
             "update_time": time.time(),
         }
@@ -69,11 +69,21 @@ class HeraCorrHandler(object):
 
         self.r.hmset("corr:cmd_status", command_status)
 
-    def _update_status(self, status):
+    def _update_status(self, status, **kwargs):
         command_status = {
             "status": status,
             "update_time": time.time(),
         }
+
+        # some corr_f commands return "err"
+        # want to be able to update the args dict
+        args = self.r.hget("corr:cmd_status", "args")
+        args = json.loads(args)
+        args.update(kwargs)
+
+        args = json.dumps(args)
+        command_status["args"] = args
+
         if status == "complete":
             command_status["completion_time"] = time.time()
 
