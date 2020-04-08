@@ -56,12 +56,28 @@ class HeraCorrHandler(object):
 
         return
 
-    def _send_response(self, command, time, **kwargs):
-        message_dict = {"command": command,
-                        "time": time,
-                        "args": kwargs
-                        }
-        n = self.r.publish("corr:response", json.dumps(message_dict))  # noqa
+    def _create_status(self, command, time, status, **kwargs):
+        command_status = {
+            "command": command,
+            "time": time,
+            "args": kwargs,
+            "status": status,
+            "update_time": time.time(),
+        }
+        # clear out the status dict from last command
+        self.r.hdel("corr:cmd_status", *self.r.hkeys("corr:cmd_status"))
+
+        self.r.hmset("corr:cmd_status", command_status)
+
+    def _update_status(self, status):
+        command_status = {
+            "status": status,
+            "update_time": time.time(),
+        }
+        if status == "complete":
+            command_status["completion_time"] = time.time()
+
+        self.r.hmset("corr:cmd_status", command_status)
 
     def _gpu_is_on(self):
         """Return True if GPUSTAT is "on" for the all nodes."""
@@ -119,6 +135,9 @@ class HeraCorrHandler(object):
                       ]
                      )
         proc.wait()
+        if int(proc.returncode) != 0:
+            self._update_status(time.time(), status="errored")
+
         # If the duration is less than the default file time, take one file of length duration.
         # Else take files of default size, rounding down the total number of files.
         if (1000 * duration) < file_duration_ms:
@@ -140,14 +159,23 @@ class HeraCorrHandler(object):
                       ]
                      )
         proc.wait()
+        if int(proc.returncode) != 0:
+            self._update_status(status="errored")
+
 
     def _xtor_down(self):
         self.logger.info("Issuing hera_catcher_down.sh")
         proc2 = Popen(["hera_catcher_down.sh"])
         proc2.wait()
+        if int(proc2.returncode) != 0:
+            self._update_status(status="errored")
+
         self.logger.info("Issuing xtor_down.sh")
         proc1 = Popen(["xtor_down.sh"])
         proc1.wait()
+        if int(proc1.returncode) != 0:
+            self._update_status(status="errored")
+
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
         """Initialize f-engines.
@@ -170,6 +198,7 @@ class HeraCorrHandler(object):
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
+            self._update_status(status="errored")
             return ERROR
         self.logger.info("Issuing hera_snap_feng_init.py -s -e --noredistapcp")
         # In order to synchonize properly with many SNAPs in the system,
@@ -183,6 +212,7 @@ class HeraCorrHandler(object):
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py -s")
+            self._update_status(status="errored")
             return ERROR
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
@@ -200,6 +230,7 @@ class HeraCorrHandler(object):
             proc3.wait()
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_input_power_eq.py")
+                self._update_status(status="errored")
                 return ERROR
         if output_rms_target is not None:
             self.logger.info("Issuing output balance "
@@ -216,6 +247,7 @@ class HeraCorrHandler(object):
             proc3.wait()
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_output_power_eq.py")
+                self._update_status(status="errored")
                 return ERROR
 
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
@@ -224,6 +256,11 @@ class HeraCorrHandler(object):
         proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         proc1.wait()
         proc2.wait()
+        if int(proc1.returncode) != 0:
+            self._update_status(status="errored")
+        if int(proc2.returncode) != 0:
+            self._update_status(status="errored")
+
         return OK
 
     def _stop_capture(self):
@@ -267,23 +304,31 @@ class HeraCorrHandler(object):
         self.logger.info("Got command: {cmd:s}".format(cmd=command))
         self.logger.info("       args: {args:s}".format(args=args))
         if command == "record":
+            starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
+            self._create_status(command, time, status="running", starttime=starttime)
+
             if not self.testmode:
                 self._start_capture(args["starttime"],
                                     args["duration"],
                                     args["acclen"],
                                     args["tag"]
                                     )
-            starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
-            self._send_response(command, time, starttime=starttime)
+            self._update_status(status="complete")
+
         elif command == "stop":
+            self._create_status(command, time, status="running")
             if not self.testmode:
                 self._stop_capture()
-            self._send_response(command, time)
+            self._update_status(status="complete")
+
         elif command == "hard_stop":
+            self._create_status(command, time, status="running")
             if not self.testmode:
                 self._xtor_down()
-            self._send_response(command, time)
+            self._update_status(status="complete")
+
         elif command == "start":
+            self._create_status(command, time, status="running")
             if not self.testmode:
                 self._xtor_up()
-            self._send_response(command, time)
+            self._update_status(command, time, status="complete")
