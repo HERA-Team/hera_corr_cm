@@ -66,7 +66,7 @@ class HeraCorrCM(object):
         self.r = self.redis_connections[redishost]
         self.corr_resp_chan = self.response_channels[redishost]
 
-    def _get_response(self, command, timeout=10):
+    def _get_response(self, command, timeout=None):
         """
         Get the correlator's response to `command` issued at `time`.
 
@@ -83,20 +83,41 @@ class HeraCorrCM(object):
             self.logger.error("Failed to decode sent command")
         target_time = sent_message["time"]
         target_cmd = sent_message["command"]
+        wait_time = time.time()
         # This loop only gets activated if we get a response which
         # isn't for us.
         while(True):
-            message = self.corr_resp_chan.get_message(timeout=timeout)
-            if message is None:
+            # message = self.corr_resp_chan.get_message(timeout=timeout)
+            command_status = self.r.hgetall("corr:cmd_status")
+            if command_status == {}:
+                self.logger.error(
+                    "Command status dict is blank. "
+                    "This should not happen durring command execution. "
+                    "Someone may have manually deleted it."
+                )
                 self.logger.error("Timed out waiting for a correlator response")
                 return
-            try:
-                message = json.loads(message["data"])
-            except:
-                self.logger.warning("Got a non-JSON message on the correlator response channel")
-                continue
-            if ((message["command"] == target_cmd) and (message["time"] == target_time)):
-                return message["args"]
+            # try:
+            #     message = json.loads(message["data"])
+            # except:
+            #     self.logger.warning("Got a non-JSON message on the correlator response channel")
+            #     continue
+
+            if (command_status["command"] == target_cmd) and (
+                command_status["time"] == target_time
+            ):
+                if command_status["status"] == "running":
+                    if timeout is not None and time.time() - wait_time > timeout:
+                        self.logger.error("Timed out waiting for a correlator response")
+                        return
+                    else:
+                        continue
+                elif command_status["status"] == "errored":
+                    self.logger.info("Command errored on execution.")
+                    return
+                elif command_status["status"] == "complete":
+                    return command_status["args"]
+
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
 
