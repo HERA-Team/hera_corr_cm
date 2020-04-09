@@ -272,7 +272,7 @@ class HeraCorrCM(object):
             return ERROR
         return OK
 
-    def phase_switch_disable(self, timeout=10):
+    def phase_switch_disable(self, timeout=None):
         """
         Disable phase switching.
 
@@ -283,7 +283,7 @@ class HeraCorrCM(object):
         sent_message = self._send_message("phase_switch", activate=False)
         if sent_message is None:
             return ERROR
-        response = self._get_response(sent_message)
+        response = self._get_response(sent_message, timeout=timeout)
         if response is None:
             return ERROR
         if not self.phase_switch_is_on()[0]:
@@ -385,7 +385,7 @@ class HeraCorrCM(object):
         sent_message = self._send_message("start")
         if sent_message is None:
             return ERROR
-        response = self._get_response(sent_message, timeout=300)
+        response = self._get_response(sent_message)
         if response is None:
             return ERROR
         return OK
