@@ -65,8 +65,8 @@ class HeraCorrHandler(object):
             "update_time": time.time(),
         }
         # bool(empty dict) is false.
-         # If it is not empy, clear out the status dict from last command
-        if not bool(self.r.hgetall("corr:cmd_status")):
+        # If it is not empy, clear out the status dict from last command
+        if bool(self.r.hgetall("corr:cmd_status")):
             self.r.hdel("corr:cmd_status", *self.r.hkeys("corr:cmd_status"))
 
         self.r.hmset("corr:cmd_status", command_status)
