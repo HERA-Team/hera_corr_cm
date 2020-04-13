@@ -94,13 +94,14 @@ class HeraCorrCM(object):
             # message = self.corr_resp_chan.get_message(timeout=timeout)
             command_status = self.r.hgetall("corr:cmd_status")
             if command_status == {}:
-                self.logger.error(
+                self.logger.warning(
                     "Command status dict is blank. "
                     "This should not happen durring command execution. "
                     "Someone may have manually deleted it."
                 )
-                self.logger.error("Unknown Command Status dict state.")
-                return
+                self.logger.warning("Unknown Command Status dict state.")
+                time.sleep(1)
+                continue
             # try:
             #     message = json.loads(message["data"])
             # except:
@@ -124,11 +125,12 @@ class HeraCorrCM(object):
                 elif command_status[b"status"] == b"complete":
                     return command_status[b"args"]
 
-            elif (command_status[b"command"] != target_cmd) and (
+            elif (command_status[b"command"] != target_cmd) or (
                 command_status[b"status"] in [b"completed", b"errored"]
             ):
                 # probably an older command just keep reading for now
                 continue
+                time.sleep(1)
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
 
