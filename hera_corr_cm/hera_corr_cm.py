@@ -99,6 +99,13 @@ class HeraCorrCM(object):
                 time.sleep(1)
                 continue
 
+            try:
+                response = json.loads(command_status[b"args"])
+            except KeyError:
+                self.logger.warning("Improperly formatted response received. Trying again.")
+                time.sleep(1)
+                continue
+
             if (command_status[b"command"] == target_cmd) and (
                 float(command_status[b"time"]) == target_time
             ):
@@ -110,11 +117,12 @@ class HeraCorrCM(object):
                         continue
                 elif command_status[b"status"] == b"errored":
                     self.logger.error("Command {} errored on execution.".format(target_cmd))
-                    if b"err" in command_status[b"args"]:
-                        self.logger.error(command_status[b"err"])
+                    # do not need byte casting here because json.loads call does proper string handling
+                    if "err" in response:
+                        self.logger.error(response["err"])
                     return
                 elif command_status[b"status"] == b"complete":
-                    return command_status[b"args"]
+                    return response
 
             elif (command_status[b"command"] != target_cmd) or (
                 command_status[b"status"] in [b"completed", b"errored"]
