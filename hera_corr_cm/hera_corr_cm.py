@@ -95,7 +95,7 @@ class HeraCorrCM(object):
                     "This should not happen durring command execution. "
                     "Someone may have manually deleted it."
                 )
-                self.logger.error("Timed out waiting for a correlator response")
+                self.logger.error("Unknown Command Status dict state.")
                 return
             # try:
             #     message = json.loads(message["data"])
@@ -103,22 +103,22 @@ class HeraCorrCM(object):
             #     self.logger.warning("Got a non-JSON message on the correlator response channel")
             #     continue
 
-            if (command_status["command"] == target_cmd) and (
-                command_status["time"] == target_time
+            if (command_status[b"command"] == target_cmd) and (
+                command_status[b"time"] == target_time
             ):
-                if command_status["status"] == "running":
+                if command_status[b"status"] == b"running":
                     if timeout is not None and time.time() - wait_time > timeout:
                         self.logger.error("Timed out waiting for a correlator response")
                         return
                     else:
                         continue
-                elif command_status["status"] == "errored":
+                elif command_status[b"status"] == b"errored":
                     self.logger.error("Command {} errored on execution.".format(target_cmd))
-                    if "err" in command_status["args"]:
-                        self.logger.error(command_status["err"])
+                    if b"err" in command_status[b"args"]:
+                        self.logger.error(command_status[b"err"])
                     return
-                elif command_status["status"] == "complete":
-                    return command_status["args"]
+                elif command_status[b"status"] == b"complete":
+                    return command_status[b"args"]
 
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
