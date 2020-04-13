@@ -179,14 +179,10 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing hera_catcher_down.sh")
         proc2 = Popen(["hera_catcher_down.sh"])
         proc2.wait()
-        if int(proc2.returncode) != 0:
-            self._update_status(status="errored")
 
         self.logger.info("Issuing xtor_down.sh")
         proc1 = Popen(["xtor_down.sh"])
         proc1.wait()
-        if int(proc1.returncode) != 0:
-            self._update_status(status="errored")
 
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
