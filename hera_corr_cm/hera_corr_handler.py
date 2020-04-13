@@ -341,4 +341,4 @@ class HeraCorrHandler(object):
             self._create_status(command, time, status="running")
             if not self.testmode:
                 self._xtor_up()
-            self._update_status(command, time, status="complete")
+            self._update_status(status="complete")
