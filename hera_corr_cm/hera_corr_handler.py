@@ -317,7 +317,7 @@ class HeraCorrHandler(object):
         self.logger.info("       args: {args:s}".format(args=args))
         if command == "record":
             starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
-            self._create_status(command, time, status="running", starttime=starttime)
+            self._create_status(command, command_time, status="running", starttime=starttime)
 
             if not self.testmode:
                 self._start_capture(args["starttime"],

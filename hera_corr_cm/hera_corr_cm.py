@@ -81,8 +81,12 @@ class HeraCorrCM(object):
             sent_message = json.loads(command)
         except:
             self.logger.error("Failed to decode sent command")
-        target_time = sent_message["time"]
+        # time should be a float already but just to make sure
+        target_time = float(sent_message["time"])
         target_cmd = sent_message["command"]
+        # there is some python 2 vs 3 tension here. Force bytes to be consistent
+        if not isinstance(target_cmd, bytes):
+            target_cmd = target_cmd.encode()
         wait_time = time.time()
         # This loop only gets activated if we get a response which
         # isn't for us.
@@ -104,7 +108,7 @@ class HeraCorrCM(object):
             #     continue
 
             if (command_status[b"command"] == target_cmd) and (
-                command_status[b"time"] == target_time
+                float(command_status[b"time"]) == target_time
             ):
                 if command_status[b"status"] == b"running":
                     if timeout is not None and time.time() - wait_time > timeout:
@@ -120,6 +124,11 @@ class HeraCorrCM(object):
                 elif command_status[b"status"] == b"complete":
                     return command_status[b"args"]
 
+            elif (command_status[b"command"] != target_cmd) and (
+                command_status[b"status"] in [b"completed", b"errored"]
+            ):
+                # probably an older command just keep reading for now
+                continue
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
 
