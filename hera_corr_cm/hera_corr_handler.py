@@ -56,10 +56,10 @@ class HeraCorrHandler(object):
 
         return
 
-    def _create_status(self, command, time, status, **kwargs):
+    def _create_status(self, command, command_time, status, **kwargs):
         command_status = {
             "command": command,
-            "time": time,
+            "time": command_time,
             "args": json.dumps(kwargs),
             "status": status,
             "update_time": time.time(),
@@ -309,7 +309,7 @@ class HeraCorrHandler(object):
     def _cmd_handler(self, message):
         d = json.loads(message)
         command = d["command"]
-        time = d["time"]
+        command_time = d["time"]
         args = d["args"]
         self.logger.info("Got command: {cmd:s}".format(cmd=command))
         self.logger.info("       args: {args:s}".format(args=args))
@@ -326,19 +326,19 @@ class HeraCorrHandler(object):
             self._update_status(status="complete")
 
         elif command == "stop":
-            self._create_status(command, time, status="running")
+            self._create_status(command, command_time, status="running")
             if not self.testmode:
                 self._stop_capture()
             self._update_status(status="complete")
 
         elif command == "hard_stop":
-            self._create_status(command, time, status="running")
+            self._create_status(command, command_time, status="running")
             if not self.testmode:
                 self._xtor_down()
             self._update_status(status="complete")
 
         elif command == "start":
-            self._create_status(command, time, status="running")
+            self._create_status(command, command_time, status="running")
             if not self.testmode:
                 self._xtor_up()
             self._update_status(status="complete")
