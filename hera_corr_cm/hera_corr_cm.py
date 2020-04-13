@@ -93,20 +93,11 @@ class HeraCorrCM(object):
         while(True):
             # message = self.corr_resp_chan.get_message(timeout=timeout)
             command_status = self.r.hgetall("corr:cmd_status")
-            if command_status == {}:
-                self.logger.warning(
-                    "Command status dict is blank. "
-                    "This should not happen durring command execution. "
-                    "Someone may have manually deleted it."
-                )
-                self.logger.warning("Unknown Command Status dict state.")
+            # bool of a dict is False if the dict is empty
+            if not bool(command_status):
+                # command dict was read while correlator was creating a new status
                 time.sleep(1)
                 continue
-            # try:
-            #     message = json.loads(message["data"])
-            # except:
-            #     self.logger.warning("Got a non-JSON message on the correlator response channel")
-            #     continue
 
             if (command_status[b"command"] == target_cmd) and (
                 float(command_status[b"time"]) == target_time
@@ -129,8 +120,8 @@ class HeraCorrCM(object):
                 command_status[b"status"] in [b"completed", b"errored"]
             ):
                 # probably an older command just keep reading for now
-                continue
                 time.sleep(1)
+                continue
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
 
