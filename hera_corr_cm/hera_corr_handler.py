@@ -312,8 +312,7 @@ class HeraCorrHandler(object):
         self.logger.info("Got command: {cmd:s}".format(cmd=command))
         self.logger.info("       args: {args:s}".format(args=args))
         if command == "record":
-            starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
-            self._create_status(command, command_time, status="running", starttime=starttime)
+            self._create_status(command, command_time, status="running", **args)
 
             if not self.testmode:
                 self._start_capture(args["starttime"],
@@ -321,22 +320,22 @@ class HeraCorrHandler(object):
                                     args["acclen"],
                                     args["tag"]
                                     )
-            self._update_status(status="complete")
-
+            starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
+            self._update_status(status="complete", starttime=starttime)
         elif command == "stop":
-            self._create_status(command, command_time, status="running")
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._stop_capture()
             self._update_status(status="complete")
 
         elif command == "hard_stop":
-            self._create_status(command, command_time, status="running")
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_down()
             self._update_status(status="complete")
 
         elif command == "start":
-            self._create_status(command, command_time, status="running")
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_up()
             self._update_status(status="complete")
