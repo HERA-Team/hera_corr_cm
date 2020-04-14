@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import socket
+import time
 hostname = socket.gethostname()
 
 if __name__ == "__main__":
@@ -20,6 +21,8 @@ if __name__ == "__main__":
     script_redis_key = "status:script:{host:s}:{file:s}".format(host=hostname, file=__file__)
 
     while(True):
+        # sleep for 1s between each attempt
+        time.sleep(1)
         # Set an expiring redis key so we know if this script dies
         handler.r.set(script_redis_key, "alive", ex=30)
         handler.process_command()

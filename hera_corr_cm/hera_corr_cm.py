@@ -91,19 +91,19 @@ class HeraCorrCM(object):
         # This loop only gets activated if we get a response which
         # isn't for us.
         while(True):
+            # sleep for 1s between each attempt
+            time.sleep(1)
             # message = self.corr_resp_chan.get_message(timeout=timeout)
             command_status = self.r.hgetall("corr:cmd_status")
             # bool of a dict is False if the dict is empty
             if not bool(command_status):
                 # command dict was read while correlator was creating a new status
-                time.sleep(1)
                 continue
 
             try:
                 response = json.loads(command_status[b"args"])
             except KeyError:
                 self.logger.warning("Improperly formatted response received. Trying again.")
-                time.sleep(1)
                 continue
 
             if (command_status[b"command"] == target_cmd) and (
@@ -128,10 +128,10 @@ class HeraCorrCM(object):
                 command_status[b"status"] in [b"completed", b"errored"]
             ):
                 # probably an older command just keep reading for now
-                time.sleep(1)
                 continue
             else:
                 self.logger.warning("Received a correlator response that wasn't meant for us")
+                continue
 
     def _send_message(self, command, **kwargs):
         """
