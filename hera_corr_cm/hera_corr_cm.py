@@ -32,7 +32,6 @@ class HeraCorrCM(object):
     # This prevents multiple instances of HeraCorrCM
     # from creating lots and lots (and lots) of redis connections
     redis_connections = {}
-    response_channels = {}
 
     def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
         """
@@ -60,11 +59,7 @@ class HeraCorrCM(object):
         # a trail of a orphaned connections.
         if redishost not in list(self.redis_connections.keys()):
             self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
-            self.response_channels[redishost] = self.redis_connections[redishost].pubsub()
-            self.response_channels[redishost].subscribe("corr:response")
-            self.response_channels[redishost].get_message(timeout=0.1)  # flush "I've just subscribed" message  # noqa
         self.r = self.redis_connections[redishost]
-        self.corr_resp_chan = self.response_channels[redishost]
 
     def _get_response(self, command, timeout=None):
         """
@@ -96,7 +91,7 @@ class HeraCorrCM(object):
         while(True):
             # sleep for 1s between each attempt
             time.sleep(1)
-            # message = self.corr_resp_chan.get_message(timeout=timeout)
+
             command_status = self.r.hgetall("corr:cmd_status")
             # bool of a dict is False if the dict is empty
             if not bool(command_status):
