@@ -173,7 +173,9 @@ class HeraCorrHandler(object):
         proc.wait()
         if int(proc.returncode) != 0:
             self._update_status(status="errored")
-
+            return ERROR
+        self._update_status(status="complete")
+        return
 
     def _xtor_down(self):
         self.logger.info("Issuing hera_catcher_down.sh")
@@ -183,7 +185,8 @@ class HeraCorrHandler(object):
         self.logger.info("Issuing xtor_down.sh")
         proc1 = Popen(["xtor_down.sh"])
         proc1.wait()
-
+        self._update_status(status="complete")
+        return
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
         """Initialize f-engines.
@@ -266,9 +269,13 @@ class HeraCorrHandler(object):
         proc2.wait()
         if int(proc1.returncode) != 0:
             self._update_status(status="errored")
+            return ERROR
+
         if int(proc2.returncode) != 0:
             self._update_status(status="errored")
+            return ERROR
 
+        self._update_status(status="complete")
         return OK
 
     def _stop_capture(self):
@@ -301,8 +308,11 @@ class HeraCorrHandler(object):
         while(time.time() - stop_time) < TIMEOUT:
             if self._outthread_is_blocked():
                 self.logger.info("X-Engines have stopped")
+                self._update_status(status="complete")
                 return
+
         self.logger.warning("X-Engines failed to stop in %d seconds" % TIMEOUT)
+        self._update_status(status="complete")
 
     def _cmd_handler(self, message):
         d = json.loads(message)
@@ -326,16 +336,13 @@ class HeraCorrHandler(object):
             self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._stop_capture()
-            self._update_status(status="complete")
 
         elif command == "hard_stop":
             self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_down()
-            self._update_status(status="complete")
 
         elif command == "start":
             self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_up()
-            self._update_status(status="complete")
