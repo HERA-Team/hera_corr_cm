@@ -239,15 +239,15 @@ class HeraCorrCM(object):
         recording, recording_time = self.is_recording()
         if recording:
             self.logger.error("Cannot start correlator -- it is already taking data")
-            return ERROR
+            return False
         else:
             sent_message = self._send_message("record", starttime=starttime,
                                               duration=duration, tag=tag, acclen=acclen)
             if sent_message is None:
-                return ERROR
+                return False
             response = self._get_response(sent_message, timeout=120)
             if response is None:
-                return ERROR
+                return False
             try:
                 # correlator always rounds down
                 # in ms
@@ -256,14 +256,14 @@ class HeraCorrCM(object):
                 self.logger.error("Couldn't parse "
                                   "response {rsp}".format(rsp=response)
                                   )
-                return ERROR
+                return False
 
             if time_diff > 250:
                 self.logger.warning("Time difference between "
                                     "commanded and accepted start "
                                     "time is {diff:f}ms".format(diff=time_diff)
                                     )
-                return ERROR
+                return False
             self.logger.info("Starting correlator at time {start} "
                              "({diff:.3f}ms before commanded)"
                              .format(start=time.ctime(response["starttime"] / 1000.),
@@ -275,11 +275,11 @@ class HeraCorrCM(object):
         """Stop the correlator data collection process."""
         sent_message = self._send_message("stop")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message, timeout=40)
         if response is None:
-            return ERROR
-        return OK
+            return False
+        return True
 
     def phase_switch_disable(self, timeout=None):
         """
@@ -288,16 +288,16 @@ class HeraCorrCM(object):
         Blocked if the correlator is recording.
         """
         if not self._require_not_recording():
-            return ERROR
+            return False
         sent_message = self._send_message("phase_switch", activate=False)
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message, timeout=timeout)
         if response is None:
-            return ERROR
+            return False
         if not self.phase_switch_is_on()[0]:
-            return OK
-        return ERROR
+            return True
+        return False
 
     def phase_switch_enable(self):
         """
@@ -307,16 +307,16 @@ class HeraCorrCM(object):
         Blocked if the correlator is recording.
         """
         if not self._require_not_recording():
-            return ERROR
+            return False
         sent_message = self._send_message("phase_switch", activate=True)
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
+            return False
         if self.phase_switch_is_on()[0]:
-            return OK
-        return ERROR
+            return True
+        return False
 
     def phase_switch_is_on(self):
         """
@@ -366,9 +366,9 @@ class HeraCorrCM(object):
         stop_stat = self._stop()
         start_stat = self._start()
         if (stop_stat == OK) and (start_stat == OK):
-            return OK
+            return True
         else:
-            return ERROR
+            return False
 
     def _stop(self):
         """Stop the X-Engines and data catcher."""
@@ -382,22 +382,22 @@ class HeraCorrCM(object):
         # Whether or not data taking stopped, hard stop everything
         sent_message = self._send_message("hard_stop")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message, timeout=120)
         if response is None:
-            return ERROR
-        return OK
+            return False
+        return True
 
     def _start(self):
         """Start the X-Engines and data catcher."""
         self.logger.info("Issuing Hard Start command")
         sent_message = self._send_message("start")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        return OK
+            return False
+        return True
 
     def antenna_enable(self, ant=None):
         """
@@ -411,18 +411,18 @@ class HeraCorrCM(object):
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
-            return ERROR
+            return False
         if not self._require_not_recording():
-            return ERROR
+            return False
         sent_message = self._send_message("rf_switch", ant=ant, input_sel="antenna")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
+            return False
         if (ant is not None) or (not self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
-            return OK
-        return ERROR
+            return True
+        return False
 
     def noise_diode_enable(self, ant=None):
         """
@@ -436,18 +436,18 @@ class HeraCorrCM(object):
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
-            return ERROR
+            return False
         if not self._require_not_recording():
-            return ERROR
+            return False
         sent_message = self._send_message("rf_switch", ant=ant, input_sel="noise")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
+            return False
         if (ant is not None) or (self.noise_diode_is_on()[0] and not self.load_is_on()[0]):
-            return OK
-        return ERROR
+            return True
+        return False
 
     def noise_diode_disable(self, ant=None):
         """
@@ -473,18 +473,18 @@ class HeraCorrCM(object):
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
-            return ERROR
+            return False
         if not self._require_not_recording():
-            return ERROR
+            return False
         sent_message = self._send_message("rf_switch", ant=ant, input_sel="load")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
+            return False
         if (ant is not None) or (self.load_is_on()[0] and not self.noise_diode_is_on()[0]):
-            return OK
-        return ERROR
+            return True
+        return False
 
     def load_disable(self, ant=None):
         """
@@ -532,11 +532,11 @@ class HeraCorrCM(object):
         coeffs_list = coeffs.tolist()
         sent_message = self._send_message("snap_eq", ant=ant, pol=pol, coeffs=coeffs_list)
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        return OK
+            return False
+        return True
 
     def get_eq_coeffs(self, ant, pol):
         """
@@ -554,17 +554,17 @@ class HeraCorrCM(object):
                                                                            .format(ant=ant, pol=pol)).items()}  # noqa
         except KeyError:
             self.logger.error("Failed to get antenna coefficients from redis. Does antenna exist?")
-            return ERROR
+            return False
         try:
             t = float(v['time'])
         except:
             self.logger.error("Failed to cast EQ coefficient upload time to float")
-            return ERROR
+            return False
         try:
             coeffs = np.array(json.loads(v['values']), dtype=np.float)
         except:
             self.logger.error("Failed to cast EQ coefficients to numpy float array")
-            return ERROR
+            return False
         return t, coeffs
 
     def get_pam_atten(self, ant, pol):
@@ -579,12 +579,12 @@ class HeraCorrCM(object):
         """
         sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="r")
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
+            return False
         if "val" not in response:
-            return ERROR
+            return False
         return response["val"]
 
     def set_pam_atten(self, ant, pol, atten):
@@ -600,11 +600,11 @@ class HeraCorrCM(object):
         """
         sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="w", val=atten)
         if sent_message is None:
-            return ERROR
+            return False
         response = self._get_response(sent_message)
         if response is None:
-            return ERROR
-        return OK
+            return False
+        return True
 
     def get_bit_stats(self):
         """

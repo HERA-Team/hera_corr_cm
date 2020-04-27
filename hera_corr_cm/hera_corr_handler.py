@@ -173,7 +173,7 @@ class HeraCorrHandler(object):
         proc.wait()
         if int(proc.returncode) != 0:
             self._update_status(status="errored")
-            return ERROR
+            return False
         self._update_status(status="complete")
         return
 
@@ -210,7 +210,7 @@ class HeraCorrHandler(object):
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
             self._update_status(status="errored")
-            return ERROR
+            return False
         self.logger.info("Issuing hera_snap_feng_init.py -s -e --noredistapcp")
         # In order to synchonize properly with many SNAPs in the system,
         # we need to multithread the arming of the syncs:
@@ -224,7 +224,7 @@ class HeraCorrHandler(object):
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py -s")
             self._update_status(status="errored")
-            return ERROR
+            return False
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
@@ -242,7 +242,7 @@ class HeraCorrHandler(object):
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_input_power_eq.py")
                 self._update_status(status="errored")
-                return ERROR
+                return False
         if output_rms_target is not None:
             self.logger.info("Issuing output balance "
                              "with target {rms:f}".format(rms=output_rms_target)
@@ -259,7 +259,7 @@ class HeraCorrHandler(object):
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_output_power_eq.py")
                 self._update_status(status="errored")
-                return ERROR
+                return False
 
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
         proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
@@ -269,14 +269,14 @@ class HeraCorrHandler(object):
         proc2.wait()
         if int(proc1.returncode) != 0:
             self._update_status(status="errored")
-            return ERROR
+            return False
 
         if int(proc2.returncode) != 0:
             self._update_status(status="errored")
-            return ERROR
+            return False
 
         self._update_status(status="complete")
-        return OK
+        return True
 
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
