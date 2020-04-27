@@ -32,7 +32,7 @@ def write_snap_hostnames_to_redis(redishost='redishost'):
     This allows hera_mc to map hostnames to SNAP part numbers.
     """
     if isinstance(redishost, str):
-        redishost = redis.Redis(redishost)
+        redishost = redis.Redis(redishost, decode_responses=True)
     snap_host = {}
     snap_list = list(json.loads(redishost.hget('corr:map', 'all_snap_inputs')).keys())
     for snap in snap_list:
@@ -61,7 +61,7 @@ def get_snaps_from_redis():
     """Read SNAPs from redis - from CM, config and correlator viewpoints."""
     import yaml
 
-    r = redis.Redis('redishost')
+    r = redis.Redis('redishost', , decode_responses=True)
     snaps_cm_list = list(json.loads(r.hget('corr:map', 'all_snap_inputs')).keys())
     snap_to_host = json.loads(r.hget('corr:map', 'snap_host'))
     snaps = {'cm': [], 'cfg': [], 'corr': []}
@@ -78,7 +78,7 @@ def get_snaps_from_redis():
 def read_maps_from_redis(redishost='redishost'):
     """Read subset of corr:map."""
     if isinstance(redishost, str):
-        redishost = redis.Redis(redishost)
+        redishost = redis.Redis(redishost, decode_responses=True)
     if not redishost.exists('corr:map'):
         return None
     x = redishost.hgetall('corr:map')
@@ -121,7 +121,7 @@ def read_cminfo_from_redis(return_as, redishost='redishost'):
 
     cminfo = {}
 
-    redis_pool = redis.ConnectionPool(host=redishost)
+    redis_pool = redis.ConnectionPool(host=redishost, decode_responses=True)
     redishost = redis.Redis(connection_pool=redis_pool)
 
     cminfo_redis = redishost.hgetall("cminfo")

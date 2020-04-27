@@ -22,7 +22,7 @@ def end_column():
   return '</div>'
 
 
-r = redis.Redis('localhost')
+r = redis.Redis('localhost', decode_responses=True)
 
 html_header = """
 <head>

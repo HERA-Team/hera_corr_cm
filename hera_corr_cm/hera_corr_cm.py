@@ -58,7 +58,7 @@ class HeraCorrCM(object):
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
         if redishost not in list(self.redis_connections.keys()):
-            self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100)
+            self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100, decode_responses=True)
         self.r = self.redis_connections[redishost]
 
     def _get_response(self, command, timeout=None):
@@ -99,30 +99,30 @@ class HeraCorrCM(object):
                 continue
 
             try:
-                response = json.loads(command_status[b"args"])
+                response = json.loads(command_status["args"])
             except KeyError:
                 self.logger.warning("Improperly formatted response received. Trying again.")
                 continue
 
-            if (command_status[b"command"] == target_cmd) and (
-                command_status[b"time"] == target_time
+            if (command_status["command"] == target_cmd) and (
+                command_status["time"] == target_time
             ):
-                if command_status[b"status"] == b"running":
+                if command_status["status"] == "running":
                     if timeout is not None and time.time() - wait_time > timeout:
                         self.logger.error("Timed out waiting for a correlator response")
                         return
                     else:
                         continue
-                elif command_status[b"status"] == b"errored":
+                elif command_status["status"] == "errored":
                     self.logger.error("Command {} errored on execution.".format(target_cmd))
                     # do not need byte casting here because json.loads call does proper string handling
                     if "err" in response:
                         self.logger.error(response["err"])
                     return
-                elif command_status[b"status"] == b"complete":
+                elif command_status["status"] == "complete":
                     return response
 
-            elif command_status[b"time"] < target_cmd:
+            elif command_status["time"] < target_cmd:
                 # if the time is less than the target time, we're probably reading an
                 # old command. Retry for now
                 continue

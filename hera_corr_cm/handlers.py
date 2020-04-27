@@ -96,7 +96,7 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
     syslog_handler.setFormatter(formatter)
     logger.addHandler(syslog_handler)
 
-    redis_host = redis.StrictRedis(redishostname, socket_timeout=1)
+    redis_host = redis.StrictRedis(redishostname, socket_timeout=1, decode_responses=True)
     try:
         redis_host.ping()
     except redis.ConnectionError:
