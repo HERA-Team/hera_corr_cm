@@ -320,7 +320,7 @@ class HeraCorrHandler(object):
         command_time = d["time"]
         args = d["args"]
         self.logger.info("Got command: {cmd:s}".format(cmd=command))
-        self.logger.info("       args: {args:s}".format(args=args))
+        self.logger.info("       args: {args}".format(args=args))
         if command == "record":
             self._create_status(command, command_time, status="running", **args)
 
