@@ -61,7 +61,7 @@ def get_snaps_from_redis():
     """Read SNAPs from redis - from CM, config and correlator viewpoints."""
     import yaml
 
-    r = redis.Redis('redishost', , decode_responses=True)
+    r = redis.Redis('redishost', decode_responses=True)
     snaps_cm_list = list(json.loads(r.hget('corr:map', 'all_snap_inputs')).keys())
     snap_to_host = json.loads(r.hget('corr:map', 'snap_host'))
     snaps = {'cm': [], 'cfg': [], 'corr': []}
