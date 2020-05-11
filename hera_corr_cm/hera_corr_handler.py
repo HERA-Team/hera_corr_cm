@@ -13,7 +13,8 @@ from .hera_corr_cm import HeraCorrCM
 CATCHER_HOST = "hera-sn1"
 SNAP_HOST = "hera-snap-head"
 SNAP_USER = "hera"
-SNAP_ENVIRONMENT = "~/.venv/bin/activate"
+# SNAP_ENVIRONMENT = "~/.venv/bin/activate"
+SNAP_ENVIRONMENT = "venv"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
 
@@ -202,7 +203,7 @@ class HeraCorrHandler(object):
         # --nomultithread boots snaps one at a time to avoid a rush on redis traffic also
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                       "source", SNAP_ENVIRONMENT,
+                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
                        "-p", "-i", "--noredistapcp", "--nomultithread"])
@@ -216,7 +217,7 @@ class HeraCorrHandler(object):
         # we need to multithread the arming of the syncs:
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                       "source", SNAP_ENVIRONMENT,
+                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
                        "-s", "-e", "--noredistapcp"])
@@ -231,7 +232,7 @@ class HeraCorrHandler(object):
                              )
             proc3 = Popen(["ssh",
                            "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                           "source", SNAP_ENVIRONMENT,
+                           "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                            "&&",
                            "hera_snap_input_power_eq.py",
                            "-e", "{pow:f}".format(pow=input_power_target),
@@ -249,7 +250,7 @@ class HeraCorrHandler(object):
                              )
             proc3 = Popen(["ssh",
                            "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                           "source", SNAP_ENVIRONMENT,
+                           "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                            "&&",
                            "hera_snap_output_power_eq.py",
                            "--rms", "{rms:f}".format(rms=output_rms_target)
