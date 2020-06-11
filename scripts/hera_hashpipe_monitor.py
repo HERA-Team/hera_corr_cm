@@ -13,7 +13,6 @@ script_redis_key = "status:script:{host:s}:{file:s}".format(host=hostname, file=
 
 
 POLL_TIME = 1  # seconds
-DB_NAME = "hashpipes"
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -38,8 +37,8 @@ if __name__ == "__main__":
         "--db_name",
         dest="DB_NAME",
         type=str,
-        default="hashpipes",
-        help="Name of influx database to connect to"
+        default="correlator_monitor",
+        help="Name of influx database to connect to."
     )
     args = parser.parse_args()
 
