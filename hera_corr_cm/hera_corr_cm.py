@@ -806,28 +806,27 @@ class HeraCorrCM(object):
         """
         rv = {}
         for key in self.r.scan_iter("hashpipe:*/status"):
-            sub_dict = rv.setdefault(key, {})
+            data_points = rv.setdefault(key, [])
             _, _, host, pipeline, _ = key.split("/")
             vals = self.r.hgetall(key)
             timestamp = datetime.datetime.utcnow().timestamp()
             tags = {"host": host, "pipeline_id": pipeline}
-            measurement = "status:hashpipe"
+            measurement = "hashpipes"
             for k in vals.keys():
                 json_body = []
                 if isinstance(vals[k], string_type):
                     if isinstance(vals[k], (bytes)):
                         vals[k] = vals[k].decode("utf-8")
-                    fields = {"value_str": vals[k]}
+                    fields = {k: vals[k]}
                 else:
                     if vals[k] == "True":
                         vals[k] = 1
                     elif vals[k] == "False":
                         vals[k] = 0
-                    fields = {"value_float": float(vals[k])}
+                    fields = {k: float(vals[k])}
                 if "value_float" in fields.keys():
-                    if np.isnan(fields["value_float"]):
+                    if np.isnan(fields[k]):
                         continue
-                tags["type"] = k
 
                 json_body += [
                     {
@@ -837,7 +836,7 @@ class HeraCorrCM(object):
                         "fields": fields,
                     }
                 ]
-                sub_dict.update({k: json_body})
+                data_points.extend(json_body)
 
         return rv
 
