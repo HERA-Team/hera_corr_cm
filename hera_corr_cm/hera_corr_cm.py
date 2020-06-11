@@ -12,6 +12,11 @@ import numpy as np
 from .handlers import add_default_log_handlers
 from . import __package__, __version__
 
+# this is identical to six.string_type but we don't want six dependence
+if sys.version_info.major > 2:
+    string_type = str
+else:
+    string_type = basestring
 N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
@@ -787,6 +792,54 @@ class HeraCorrCM(object):
     def get_x_status(self):
         """Return a dictionary of X-engine status flags."""
         raise NotImplementedError("No code for get_x_status.")
+
+    def get_hashpipe_status(self):
+        """Return a dictionary of hashpipe status flags from redis.
+
+        Returns
+        -------
+        dict of dicts
+            Upper lever dictionary is keyed by hashpipe keys in redis.
+            The value for each key is itself a dictionary of all measurements in that redis hash.
+            Sub dictionaries are formatted to be properly ingested by an influxdb as json dicts.
+
+        """
+        rv = {}
+        for key in self.r.scan_iter("hashpipe:*/status"):
+            sub_dict = rv.setdefault(key, {})
+            _, _, host, pipeline, _ = key.split("/")
+            vals = self.r.hgetall(key)
+            timestamp = datetime.datetime.utcnow().timestamp()
+            tags = {"host": host, "pipeline_id": pipeline}
+            measurement = "status:hashpipe"
+            for k in vals.keys():
+                json_body = []
+                if isinstance(vals[k], string_type):
+                    if isinstance(vals[k], (bytes)):
+                        vals[k] = vals[k].decode("utf-8")
+                    fields = {"value_str": vals[k]}
+                else:
+                    if vals[k] == "True":
+                        vals[k] = 1
+                    elif vals[k] == "False":
+                        vals[k] = 0
+                    fields = {"value_float": float(vals[k])}
+                if "value_float" in fields.keys():
+                    if np.isnan(fields["value_float"]):
+                        continue
+                tags["type"] = k
+
+                json_body += [
+                    {
+                        "measurement": measurement,
+                        "tags": tags,
+                        "time": timestamp,
+                        "fields": fields,
+                    }
+                ]
+                sub_dict.update({k: json_body})
+
+        return rv
 
     def get_feed_status(self):
         """Return a dictionary of feed sensor values."""
