@@ -18,10 +18,6 @@ SNAP_ENVIRONMENT = "venv"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
 
-ERROR = False
-OK = True
-
-
 class HeraCorrHandler(object):
     """Correlator Handler."""
 

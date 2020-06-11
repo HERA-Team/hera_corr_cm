@@ -12,9 +12,6 @@ import numpy as np
 from .handlers import add_default_log_handlers
 from . import __package__, __version__
 
-OK = True
-ERROR = False
-
 N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
@@ -361,7 +358,7 @@ class HeraCorrCM(object):
         Restart (power cycle) the correlator.
 
         Returning it to the settings in the current configuration. Will reset ADC
-        delay calibrations.  Returns OK or ERROR
+        delay calibrations.  Returns True or False
         """
         stop_stat = self._stop()
         start_stat = self._start()
@@ -407,7 +404,7 @@ class HeraCorrCM(object):
         inputs:
             ant (integer): HERA antenna number to switch to antenna. Set to None for all antennas.
         returns:
-            ERROR or OK
+            False or True
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
@@ -432,7 +429,7 @@ class HeraCorrCM(object):
             ant (integer): HERA antenna number to switch to noise. Set to None to
                            switch all antennas.
         returns:
-            ERROR or OK
+            False or True
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
@@ -457,7 +454,7 @@ class HeraCorrCM(object):
             ant (integer): HERA antenna number to switch to noise. Set to None to
                            switch all antennas.
         returns:
-            ERROR or OK
+            False or True
         """
         self.antenna_enable(ant=ant)
 
@@ -469,7 +466,7 @@ class HeraCorrCM(object):
             ant (integer): HERA antenna number to switch to load. Set to None to
                            switch all antennas.
         returns:
-            ERROR or OK
+            False or True
         """
         if (ant is not None) and (not isinstance(ant, int)):
             self.logger.error("Invalid `ant` argument. Should be integer or None")
@@ -494,7 +491,7 @@ class HeraCorrCM(object):
             ant (integer): HERA antenna number to switch to noise. Set to None to
                            switch all antennas.
         returns:
-            ERROR or OK
+            False or True
         """
         self.antenna_enable(ant=ant)
 
@@ -527,7 +524,7 @@ class HeraCorrCM(object):
             pol (string): Polarization to query (must be 'e' or 'n')
             coeffs (numpy.array): Coefficients to load.
         returns:
-            ERROR or OK
+            False or True
         """
         coeffs_list = coeffs.tolist()
         sent_message = self._send_message("snap_eq", ant=ant, pol=pol, coeffs=coeffs_list)
@@ -547,7 +544,7 @@ class HeraCorrCM(object):
             pol (string): Polarization to query (must be 'e' or 'n')
         returns:
             time (UNIX timestamp float), coefficients (numpy array of floats)
-            or ERROR, in the case of a failure
+            or False, in the case of a failure
         """
         try:
             v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'
@@ -575,7 +572,7 @@ class HeraCorrCM(object):
             ant (integer): HERA antenna number to query
             pol (string): Polarization to query (must be 'e' or 'n')
         returns:
-            ERROR, or attenuation value in dB (integer)
+            False, or attenuation value in dB (integer)
         """
         sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="r")
         if sent_message is None:
@@ -596,7 +593,7 @@ class HeraCorrCM(object):
             pol (string): Polarization to query (must be 'e' or 'n')
             atten (integer): Attenuation value in dB
         returns:
-            OK or ERROR
+            False or True
         """
         sent_message = self._send_message("pam_atten", ant=ant, pol=pol, rw="w", val=atten)
         if sent_message is None:
@@ -842,6 +839,6 @@ class HeraCorrCM(object):
         """
         Run a correlator test using inbuilt test vector generators.
 
-        Will take a few minutes to run. Returns OK or ERROR.
+        Will take a few minutes to run. Returns True or False.
         """
         raise NotImplementedError("No code in run_correlator_test")
