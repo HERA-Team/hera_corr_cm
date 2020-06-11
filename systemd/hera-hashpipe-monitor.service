@@ -1,5 +1,4 @@
-# Configuration file for systemd that keeps the HERA correlator checker
-# daemon running.
+# Configuration file for systemd that keeps the HERA hashpipe monitor running.
 #
 # Copy this file to /etc/systemd/system/. Then run
 # `systemctl enable hera-hashpipe-monitor` and `systemctl start hera-hashpipe-monitor`.
