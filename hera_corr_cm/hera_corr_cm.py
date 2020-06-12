@@ -362,7 +362,7 @@ class HeraCorrCM(object):
         """
         stop_stat = self._stop()
         start_stat = self._start()
-        if (stop_stat == OK) and (start_stat == OK):
+        if (stop_stat == True) and (start_stat == True):
             return True
         else:
             return False
@@ -547,8 +547,8 @@ class HeraCorrCM(object):
             or False, in the case of a failure
         """
         try:
-            v = {key.decode(): val.decode() for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'
-                                                                           .format(ant=ant, pol=pol)).items()}  # noqa
+            v = {key: val for key, val in self.r.hgetall('eq:ant:{ant:d}:{pol}'
+                                                         .format(ant=ant, pol=pol)).items()}  # noqa
         except KeyError:
             self.logger.error("Failed to get antenna coefficients from redis. Does antenna exist?")
             return False
@@ -631,16 +631,16 @@ class HeraCorrCM(object):
         keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
         for key in self.r.scan_iter(keystart + "*"):
-            rv[key.decode().lstrip(keystart)] = self._hgetall(key)
+            rv[key.lstrip(keystart)] = self._hgetall(key)
         return rv
 
     def _hgetall(self, rkey):
         """
         Generate a wrapper around self.r.hgetall(rkey).
 
-        Converts (.decode()'s the keys and values of the resulting byte array to a string.
+        Converts the keys and values of the resulting byte array to a string.
         """
-        return {key.decode(): val.decode() for key, val in self.r.hgetall(rkey).items()}
+        return {key: val for key, val in self.r.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -812,7 +812,7 @@ class HeraCorrCM(object):
         """
         rv = {}
         for key in self.r.scan_iter("version:*"):
-            newkey = key.decode().lstrip("version:")
+            newkey = key.lstrip("version:")
             rv[newkey] = {}
             x = self._hgetall(key)
             rv[newkey]["version"] = x["version"]

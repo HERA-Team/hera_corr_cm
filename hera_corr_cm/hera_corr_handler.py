@@ -13,10 +13,10 @@ from .hera_corr_cm import HeraCorrCM
 CATCHER_HOST = "hera-sn1"
 SNAP_HOST = "hera-snap-head"
 SNAP_USER = "hera"
-# SNAP_ENVIRONMENT = "~/.venv/bin/activate"
 SNAP_ENVIRONMENT = "venv"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
+
 
 class HeraCorrHandler(object):
     """Correlator Handler."""
@@ -202,26 +202,13 @@ class HeraCorrHandler(object):
                        "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
-                       "-p", "-i", "--noredistapcp", "--nomultithread"])
+                       "-P", "-i", "-s", "-e", "--noredistapcp", "--nomultithread"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
             self._update_status(status="errored")
             return False
-        self.logger.info("Issuing hera_snap_feng_init.py -s -e --noredistapcp")
-        # In order to synchonize properly with many SNAPs in the system,
-        # we need to multithread the arming of the syncs:
-        proc3 = Popen(["ssh",
-                       "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
-                       "&&",
-                       "hera_snap_feng_init.py",
-                       "-s", "-e", "--noredistapcp"])
-        proc3.wait()
-        if int(proc3.returncode) != 0:
-            self.logger.error("Error running hera_snap_feng_init.py -s")
-            self._update_status(status="errored")
-            return False
+
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
