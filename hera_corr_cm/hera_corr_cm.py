@@ -799,9 +799,9 @@ class HeraCorrCM(object):
 
         Returns
         -------
-        dict of dicts
+        dict of lists
             Upper lever dictionary is keyed by hashpipe keys in redis.
-            The value for each key is itself a dictionary of all measurements in that redis hash.
+            The value for each key is a list of dicts of all measurements in that redis hash.
             Sub dictionaries are formatted to be properly ingested by an influxdb as json dicts.
 
         """
