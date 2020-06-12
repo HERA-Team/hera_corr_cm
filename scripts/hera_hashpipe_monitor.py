@@ -12,8 +12,6 @@ script_redis_key = "status:script:{host:s}:{file:s}".format(host=hostname, file=
 # Set an expiring redis key so we know if this script dies
 
 
-POLL_TIME = 1  # seconds
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="Retrieve hashpipe stats from redis and add to influxdb.",
@@ -40,6 +38,13 @@ if __name__ == "__main__":
         default="correlator_monitor",
         help="Name of influx database to connect to."
     )
+    parser.add_argumen(
+        "--poll_time",
+        dest="POLL_TIME",
+        type=int,
+        default=1,
+        help="The polling rate of the monitor in seconds."
+    )
     args = parser.parse_args()
 
     corr_cm = HeraCorrCM()
@@ -51,4 +56,4 @@ if __name__ == "__main__":
 
         # Let redis know this script is working as expected
         corr_cm.r.set(script_redis_key, "alive", ex=30)
-        time.sleep(POLL_TIME)
+        time.sleep(args.POLL_TIME)
