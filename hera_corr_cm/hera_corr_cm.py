@@ -810,7 +810,7 @@ class HeraCorrCM(object):
             data_points = rv.setdefault(key, [])
             _, _, host, pipeline, _ = key.split("/")
             vals = self.r.hgetall(key)
-            timestamp = datetime.datetime.utcnow().timestamp() * 1000
+            timestamp = datetime.datetime.utcnow().isoformat()
             tags = {"host": host, "pipeline_id": pipeline}
             measurement = "hashpipes"
             for k in vals.keys():
