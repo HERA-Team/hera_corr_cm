@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
 from influxdb import InfluxDBClient
-from time import sleep, time
+import time
 import argparse
-import hera_corr_cm import HeraCorrCM
+from hera_corr_cm import HeraCorrCM
 import socket
 hostname = socket.gethostname()
 
@@ -42,11 +42,11 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    corr_cm = hera_corr_cm.HeraCorrCM()
+    corr_cm = HeraCorrCM()
     db = InfluxDBClient(args.DB_HOST, args.DB_PORT, database=args.DB_NAME)
     while True:
-        haspipe_stats = corr_cm.get_hashpipe_status()
-        for key in haspipe_stats:
+        hashpipe_stats = corr_cm.get_hashpipe_status()
+        for key in hashpipe_stats:
             db.write_points(hashpipe_stats[key], batch_size=32)
 
         # Let redis know this script is working as expected
