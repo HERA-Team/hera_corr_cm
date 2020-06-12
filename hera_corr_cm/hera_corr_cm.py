@@ -815,19 +815,20 @@ class HeraCorrCM(object):
             measurement = "hashpipes"
             for k in vals.keys():
                 json_body = []
-                if isinstance(vals[k], string_type):
-                    if isinstance(vals[k], (bytes)):
-                        vals[k] = vals[k].decode("utf-8")
-                    fields = {k: vals[k]}
-                else:
+                # there are many floats, but redis casts everything
+                # as strings. Try to recast as a number first.
+                try:
                     if vals[k] == "True":
                         vals[k] = 1
                     elif vals[k] == "False":
                         vals[k] = 0
                     fields = {k: float(vals[k])}
-                if "value_float" in fields.keys():
                     if np.isnan(fields[k]):
                         continue
+                except:
+                    if isinstance(vals[k], (bytes)):
+                        vals[k] = vals[k].decode("utf-8")
+                    fields = {k: vals[k]}
 
                 json_body += [
                     {
