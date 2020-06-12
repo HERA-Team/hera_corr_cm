@@ -43,12 +43,12 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     corr_cm = hera_corr_cm.HeraCorrCM()
-    with InfluxDBClient(args.DB_HOST, args.DB_PORT, database=args.DB_NAME) as db:
-        while True:
-            haspipe_stats = corr_cm.get_hashpipe_status()
-            for key in haspipe_stats:
-                db.write_points(hashpipe_stats[key], batch_size=32)
+    db = InfluxDBClient(args.DB_HOST, args.DB_PORT, database=args.DB_NAME)
+    while True:
+        haspipe_stats = corr_cm.get_hashpipe_status()
+        for key in haspipe_stats:
+            db.write_points(hashpipe_stats[key], batch_size=32)
 
-            # Let redis know this script is working as expected
-            corr_cm.r.set(script_redis_key, "alive", ex=30)
-            time.sleep(POLL_TIME)
+        # Let redis know this script is working as expected
+        corr_cm.r.set(script_redis_key, "alive", ex=30)
+        time.sleep(POLL_TIME)
