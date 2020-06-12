@@ -362,7 +362,7 @@ class HeraCorrCM(object):
         """
         stop_stat = self._stop()
         start_stat = self._start()
-        if (stop_stat == OK) and (start_stat == OK):
+        if (stop_stat == True) and (start_stat == True):
             return True
         else:
             return False
