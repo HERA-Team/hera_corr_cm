@@ -38,7 +38,7 @@ if __name__ == "__main__":
         default="correlator_monitor",
         help="Name of influx database to connect to."
     )
-    parser.add_argumen(
+    parser.add_argument(
         "--poll_time",
         dest="POLL_TIME",
         type=int,
