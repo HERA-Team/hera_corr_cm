@@ -13,13 +13,10 @@ from .hera_corr_cm import HeraCorrCM
 CATCHER_HOST = "hera-sn1"
 SNAP_HOST = "hera-snap-head"
 SNAP_USER = "hera"
-SNAP_ENVIRONMENT = "~/.venv/bin/activate"
+# SNAP_ENVIRONMENT = "~/.venv/bin/activate"
+SNAP_ENVIRONMENT = "venv"
 X_HOSTS = ["px%d" % i for i in range(1, 17)]
 X_PIPES = 2
-
-ERROR = False
-OK = True
-
 
 class HeraCorrHandler(object):
     """Correlator Handler."""
@@ -33,7 +30,7 @@ class HeraCorrHandler(object):
         self.testmode = testmode
 
         self.cm = HeraCorrCM(redishost=self.redishost, include_fpga=False)
-        self.r = redis.Redis(self.redishost)
+        self.r = redis.Redis(self.redishost, decode_responses=True)
 
         # store the last time a command was received in unix time in seconds
         self.last_command_time = None
@@ -56,12 +53,40 @@ class HeraCorrHandler(object):
 
         return
 
-    def _send_response(self, command, time, **kwargs):
-        message_dict = {"command": command,
-                        "time": time,
-                        "args": kwargs
-                        }
-        n = self.r.publish("corr:response", json.dumps(message_dict))  # noqa
+    def _create_status(self, command, command_time, status, **kwargs):
+        command_status = {
+            "command": command,
+            "time": command_time,
+            "args": json.dumps(kwargs),
+            "status": status,
+            "update_time": time.time(),
+        }
+        # bool(empty dict) is false.
+        # If it is not empy, clear out the status dict from last command
+        if bool(self.r.hgetall("corr:cmd_status")):
+            self.r.hdel("corr:cmd_status", *self.r.hkeys("corr:cmd_status"))
+
+        self.r.hmset("corr:cmd_status", command_status)
+
+    def _update_status(self, status, **kwargs):
+        command_status = {
+            "status": status,
+            "update_time": time.time(),
+        }
+
+        # some corr_f commands return "err"
+        # want to be able to update the args dict
+        args = self.r.hget("corr:cmd_status", "args")
+        args = json.loads(args)
+        args.update(kwargs)
+
+        args = json.dumps(args)
+        command_status["args"] = args
+
+        if status == "complete":
+            command_status["completion_time"] = time.time()
+
+        self.r.hmset("corr:cmd_status", command_status)
 
     def _gpu_is_on(self):
         """Return True if GPUSTAT is "on" for the all nodes."""
@@ -119,6 +144,9 @@ class HeraCorrHandler(object):
                       ]
                      )
         proc.wait()
+        if int(proc.returncode) != 0:
+            self._update_status(time.time(), status="errored")
+
         # If the duration is less than the default file time, take one file of length duration.
         # Else take files of default size, rounding down the total number of files.
         if (1000 * duration) < file_duration_ms:
@@ -140,14 +168,22 @@ class HeraCorrHandler(object):
                       ]
                      )
         proc.wait()
+        if int(proc.returncode) != 0:
+            self._update_status(status="errored")
+            return False
+        self._update_status(status="complete")
+        return
 
     def _xtor_down(self):
         self.logger.info("Issuing hera_catcher_down.sh")
         proc2 = Popen(["hera_catcher_down.sh"])
         proc2.wait()
+
         self.logger.info("Issuing xtor_down.sh")
         proc1 = Popen(["xtor_down.sh"])
         proc1.wait()
+        self._update_status(status="complete")
+        return
 
     def _xtor_up(self, input_power_target=None, output_rms_target=None):
         """Initialize f-engines.
@@ -163,34 +199,36 @@ class HeraCorrHandler(object):
         # --nomultithread boots snaps one at a time to avoid a rush on redis traffic also
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                       "source", SNAP_ENVIRONMENT,
+                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
                        "-p", "-i", "--noredistapcp", "--nomultithread"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
-            return ERROR
+            self._update_status(status="errored")
+            return False
         self.logger.info("Issuing hera_snap_feng_init.py -s -e --noredistapcp")
         # In order to synchonize properly with many SNAPs in the system,
         # we need to multithread the arming of the syncs:
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                       "source", SNAP_ENVIRONMENT,
+                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
                        "hera_snap_feng_init.py",
                        "-s", "-e", "--noredistapcp"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py -s")
-            return ERROR
+            self._update_status(status="errored")
+            return False
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
                              )
             proc3 = Popen(["ssh",
                            "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                           "source", SNAP_ENVIRONMENT,
+                           "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                            "&&",
                            "hera_snap_input_power_eq.py",
                            "-e", "{pow:f}".format(pow=input_power_target),
@@ -200,14 +238,15 @@ class HeraCorrHandler(object):
             proc3.wait()
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_input_power_eq.py")
-                return ERROR
+                self._update_status(status="errored")
+                return False
         if output_rms_target is not None:
             self.logger.info("Issuing output balance "
                              "with target {rms:f}".format(rms=output_rms_target)
                              )
             proc3 = Popen(["ssh",
                            "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
-                           "source", SNAP_ENVIRONMENT,
+                           "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                            "&&",
                            "hera_snap_output_power_eq.py",
                            "--rms", "{rms:f}".format(rms=output_rms_target)
@@ -216,7 +255,8 @@ class HeraCorrHandler(object):
             proc3.wait()
             if int(proc3.returncode) != 0:
                 self.logger.error("Error running hera_snap_output_power_eq.py")
-                return ERROR
+                self._update_status(status="errored")
+                return False
 
         self.logger.info("Issuing xtor_up.py --runtweak px{1..16}")
         proc1 = Popen(["xtor_up.py", "--runtweak", "--redislog"] + X_HOSTS)
@@ -224,7 +264,16 @@ class HeraCorrHandler(object):
         proc2 = Popen(["hera_catcher_up.py", "--redislog", CATCHER_HOST])
         proc1.wait()
         proc2.wait()
-        return OK
+        if int(proc1.returncode) != 0:
+            self._update_status(status="errored")
+            return False
+
+        if int(proc2.returncode) != 0:
+            self._update_status(status="errored")
+            return False
+
+        self._update_status(status="complete")
+        return True
 
     def _stop_capture(self):
         self.logger.info("Stopping correlator")
@@ -256,17 +305,22 @@ class HeraCorrHandler(object):
         while(time.time() - stop_time) < TIMEOUT:
             if self._outthread_is_blocked():
                 self.logger.info("X-Engines have stopped")
+                self._update_status(status="complete")
                 return
+
         self.logger.warning("X-Engines failed to stop in %d seconds" % TIMEOUT)
+        self._update_status(status="complete")
 
     def _cmd_handler(self, message):
         d = json.loads(message)
         command = d["command"]
-        time = d["time"]
+        command_time = d["time"]
         args = d["args"]
         self.logger.info("Got command: {cmd:s}".format(cmd=command))
-        self.logger.info("       args: {args:s}".format(args=args))
+        self.logger.info("       args: {args}".format(args=args))
         if command == "record":
+            self._create_status(command, command_time, status="running", **args)
+
             if not self.testmode:
                 self._start_capture(args["starttime"],
                                     args["duration"],
@@ -274,16 +328,18 @@ class HeraCorrHandler(object):
                                     args["tag"]
                                     )
             starttime = float(self.r["corr:trig_time"]) * 1000  # Send in ms
-            self._send_response(command, time, starttime=starttime)
+            self._update_status(status="complete", starttime=starttime)
         elif command == "stop":
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._stop_capture()
-            self._send_response(command, time)
+
         elif command == "hard_stop":
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_down()
-            self._send_response(command, time)
+
         elif command == "start":
+            self._create_status(command, command_time, status="running", **args)
             if not self.testmode:
                 self._xtor_up()
-            self._send_response(command, time)

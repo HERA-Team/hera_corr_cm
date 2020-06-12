@@ -8,7 +8,7 @@ from astropy.time import Time
 # Two redis instances run on this server.
 # port 6379 is the hera-digi mirror
 # port 6380 is the paper1 mirror
-r = redis.Redis('localhost', 6379)
+r = redis.Redis('localhost', 6379, decode_responses=True)
 
 n_ants = 192
 # Generate frequency axis
