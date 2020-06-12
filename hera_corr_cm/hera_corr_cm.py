@@ -707,6 +707,7 @@ class HeraCorrCM(object):
             fem_imu_theta (float) : IMU-reported theta (degrees)
             fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
+            fft_of (bool)         : True if there was an FFT overflow
             eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
             histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
@@ -735,6 +736,7 @@ class HeraCorrCM(object):
             'fem_n_lna_power': lambda x: (x == 'True'),
             'fem_imu_theta': float,
             'fem_imu_phi': float,
+            'fft_of': lambda x: (x == 'True'),
             'eq_coeffs': json.loads,
             'histogram': json.loads,
             'autocorrelation': json.loads,
