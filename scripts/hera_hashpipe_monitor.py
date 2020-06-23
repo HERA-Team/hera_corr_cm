@@ -18,7 +18,7 @@ if __name__ == "__main__":
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
-        "--db_hose",
+        "--db_host",
         dest="DB_HOST",
         type=str,
         default="qmaster",
