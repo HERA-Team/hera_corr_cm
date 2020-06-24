@@ -14,7 +14,7 @@ Restart=always
 RestartSec=60
 User=hera
 Group=hera
-ExecStart=/home/hera/hera-venv/bin/hera_hashpipe_monitor.py
+ExecStart=/home/hera/hera-venv/envs/hera/bin/hera_hashpipe_monitor.py
 
 [Install]
 WantedBy=multi-user.target
