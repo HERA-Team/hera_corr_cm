@@ -15,7 +15,7 @@ Restart=always
 RestartSec=60
 User=hera
 Group=hera
-ExecStart=/home/hera/hera-venv/bin/hera_corr_cmd_handler.py
+ExecStart=/home/hera/hera-venv/envs/hera/bin/hera_corr_cmd_handler.py
 
 [Install]
 WantedBy=multi-user.target
