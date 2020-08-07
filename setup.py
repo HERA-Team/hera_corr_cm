@@ -20,7 +20,7 @@ with open(os.path.join(here, 'hera_corr_cm', '__version__.py'), 'w') as fh:
 
 PACKAGES = find_packages()
 print(PACKAGES)
-REQUIRES = ["redis", "pyaml"]
+REQUIRES = ["redis", "pyyaml"]
 
 setup_args = dict(name="hera_corr",
                   maintainer="HERA Team",
