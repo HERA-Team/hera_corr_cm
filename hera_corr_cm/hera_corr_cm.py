@@ -81,13 +81,13 @@ class HeraCorrCM(object):
             self.logger.error("Failed to decode sent command")
         # time is probably a float, but will cast as a str for exact comparison
         target_time = str(sent_message["time"])
-        if not isinstance(target_time, bytes):
-            target_time = target_time.encode()
+        # there is some python 2 vs 3 tension here. Force unicode to be consistent
+        if isinstance(target_time, bytes):
+            target_time = target_time.decode("utf-8")
 
         target_cmd = sent_message["command"]
-        # there is some python 2 vs 3 tension here. Force bytes to be consistent
-        if not isinstance(target_cmd, bytes):
-            target_cmd = target_cmd.encode()
+        if isinstance(target_cmd, bytes):
+            target_cmd = target_cmd.decode("utf-8")
         wait_time = time.time()
         # This loop only gets activated if we get a response which
         # isn't for us.
