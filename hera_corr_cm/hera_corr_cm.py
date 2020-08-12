@@ -82,6 +82,7 @@ class HeraCorrCM(object):
         # time is probably a float, but will cast as a str for exact comparison
         target_time = str(sent_message["time"])
         # there is some python 2 vs 3 tension here. Force unicode to be consistent
+        # with decode_responses, redis is returning unicode str for entries and keys.
         if isinstance(target_time, bytes):
             target_time = target_time.decode("utf-8")
 
