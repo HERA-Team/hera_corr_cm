@@ -201,8 +201,7 @@ class HeraCorrHandler(object):
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
                        "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
-                       "hera_snap_feng_init.py",
-                       "-P", "-i", "-s", "-e", "--noredistapcp", "--nomultithread"])
+                       "hera_snap_feng_init.py", "-P", "-i", "-s", "-e"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
