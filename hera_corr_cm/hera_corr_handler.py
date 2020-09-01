@@ -191,23 +191,33 @@ class HeraCorrHandler(object):
         For BDA snap_init has to happen first to ensure the antennas in
         the config file are correct.
         """
+        # -p is used to not re-initialize all snaps. Array is on 100% 01 SEP 2020
+        # -i initializes snap boards that are not already initialized
         self.logger.info("Issuing hera_snap_feng_init.py -p -i --noredistapcp --nomultithread")
-        # -p (not -P) to allow booted snaps to remain without reprogramming
-        #    this makes a second call after a partial boot more likely to work.
-        # -s is synchronize
-        # --noredistapcp bypasses redis for some programming traffic to avoid a throughput bottleneck
-        # --nomultithread boots snaps one at a time to avoid a rush on redis traffic also
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
                        "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
                        "&&",
-                       "hera_snap_feng_init.py", "-P", "-i", "-s", "-e"])
+                       "hera_snap_feng_init.py", "-p", "-i"])
         proc3.wait()
         if int(proc3.returncode) != 0:
             self.logger.error("Error running hera_snap_feng_init.py")
             self._update_status(status="errored")
             return False
 
+        # Re-break-up the sync and ethernet steps for now just for ease of logging.
+        # -s is synchronize
+        # -e enables ethernet output
+        proc3 = Popen(["ssh",
+                       "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
+                       "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
+                       "&&",
+                       "hera_snap_feng_init.py", "-s", "-e"])
+        proc3.wait()
+        if int(proc3.returncode) != 0:
+            self.logger.error("Error running hera_snap_feng_init.py")
+            self._update_status(status="errored")
+            return False
         if input_power_target is not None:
             self.logger.info("Issuing input balance "
                              "with target {pow:f}".format(pow=input_power_target)
