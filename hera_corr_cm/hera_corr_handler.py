@@ -193,7 +193,7 @@ class HeraCorrHandler(object):
         """
         # -p is used to not re-initialize all snaps. Array is on 100% 01 SEP 2020
         # -i initializes snap boards that are not already initialized
-        self.logger.info("Issuing hera_snap_feng_init.py -p -i --noredistapcp --nomultithread")
+        self.logger.info("Issuing hera_snap_feng_init.py -p -i")
         proc3 = Popen(["ssh",
                        "{user:s}@{host:s}".format(user=SNAP_USER, host=SNAP_HOST),
                        "source", "/home/hera/anaconda2/bin/activate", SNAP_ENVIRONMENT,
