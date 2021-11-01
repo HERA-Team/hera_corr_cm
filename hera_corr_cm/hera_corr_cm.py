@@ -108,18 +108,6 @@ class HeraCorrCM(object):
         else:
             return 0.0
 
-    def _require_not_recording(self):
-        recording, recording_time = self.is_recording()
-        if recording:
-            if self.danger_mode:
-                self.logger.warning("Corelator is recording, but command blocks disabled!")
-                return True
-            else:
-                self.logger.error("Correlator is recording!")
-                return False
-        else:
-            return True
-
     def secs_to_n_spectra(self, secs):
         """Return the number of spectra in a given interval of `secs` seconds."""
         return secs / ((2.0 * N_CHAN) / SAMPLE_RATE)
