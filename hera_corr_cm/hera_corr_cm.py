@@ -21,8 +21,6 @@ else:
 N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
-LOGGER = add_default_log_handlers(logging.getLogger(__name__))
-
 
 class HeraCorrCM(object):
     """
@@ -36,7 +34,7 @@ class HeraCorrCM(object):
     # from creating lots and lots (and lots) of redis connections
     redis_connections = {}
 
-    def __init__(self, redishost="redishost", logger=LOGGER, danger_mode=False, include_fpga=False):
+    def __init__(self, redishost="redishost", logger=None, danger_mode=False, include_fpga=False):
         """
         Create a connection to the correlator via a redis server.
 
@@ -51,6 +49,10 @@ class HeraCorrCM(object):
             danger_mode (Boolean): If True, disables the
                                    only-allow-command-when-not-observing checks.
         """
+        if logger is None:
+            logger = add_default_log_handlers(
+                logging.getLogger(__name__), redishostname=redishost
+            )
         self.logger = logger
         self.danger_mode = danger_mode
         # If the redishost is one we've already connected to, use it again.
