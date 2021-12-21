@@ -63,7 +63,9 @@ class HeraCorrCM(object):
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
         if redishost not in list(self.redis_connections.keys()):
-            self.redis_connections[redishost] = redis.Redis(redishost, max_connections=100, decode_responses=True)
+            self.redis_connections[redishost] = redis.Redis(redishost,
+                                                            max_connections=100,
+                                                            decode_responses=True)
         self.r = self.redis_connections[redishost]
 
     def is_recording(self):
@@ -304,8 +306,7 @@ class HeraCorrCM(object):
             fem_current (float)   : FEM current sensor reading for this antenna (A)
             fem_id (list)         : Bytewise serial number of this FEM
             fem_switch(str)       : Switch state for this FEM ('antenna', 'load', or 'noise')
-            fem_e_lna_power(bool) : True if East-pol LNA is powered
-            fem_n_lna_power(bool) : True if North-pol LNA is powered
+            fem_lna_power(bool)   : True if LNA is powered
             fem_imu_theta (float) : IMU-reported theta (degrees)
             fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
@@ -314,6 +315,9 @@ class HeraCorrCM(object):
             histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
+            clip_count (int)     : number of clipped counts per SNAP
+            fem_humidity (float) : in relative humidity
+            fem_pressure (float) : in mb
 
             Unknown values return the string "None"
         """
@@ -332,12 +336,14 @@ class HeraCorrCM(object):
             'fem_temp': float,
             'fem_voltage': float,
             'fem_current': float,
+            'fem_pressure': float,
+            'fem_humidity': float,
             'fem_id': json.loads,
             'fem_switch': str,
-            'fem_e_lna_power': lambda x: (x == 'True'),
-            'fem_n_lna_power': lambda x: (x == 'True'),
+            'fem_lna_power': lambda x: (x == 'True'),
             'fem_imu_theta': float,
             'fem_imu_phi': float,
+            'clip_count': int,
             'fft_of': lambda x: (x == 'True'),
             'eq_coeffs': json.loads,
             'histogram': json.loads,
