@@ -307,8 +307,6 @@ class HeraCorrCM(object):
             fem_id (list)         : Bytewise serial number of this FEM
             fem_switch(str)       : Switch state for this FEM ('antenna', 'load', or 'noise')
             fem_lna_power(bool)   : True if LNA is powered
-            fem_e_lna_power(bool) : True if east LNA is powered (kept for backward compatibility)
-            fem_n_lna_power(bool) : True if north LNA is powered (kept for backward compatibility)
             fem_imu_theta (float) : IMU-reported theta (degrees)
             fem_imu_phi (float)   : IMU-reported phi (degrees)
             fem_temp (float)      : FEM temperature sensor reading for this antenna (C)
@@ -360,9 +358,6 @@ class HeraCorrCM(object):
                     rv[host][key] = convfunc(stats[host][key])
                 except:
                     rv[host][key] = "None"
-                if key == 'fem_lna_power':
-                    rv[host]['fem_e_lna_power'] = rv[host][key]
-                    rv[host]['fem_n_lna_power'] = rv[host][key]
         return rv
 
     def get_snaprf_status(self):
