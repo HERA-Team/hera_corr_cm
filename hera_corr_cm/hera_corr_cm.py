@@ -358,8 +358,8 @@ class HeraCorrCM(object):
                 antpol = "{}:{}".format(ant, pol)
                 ant_status[antpol] = {}
                 host = vals[pol]['host']
-                stream = str(vals[pol]['channel'])
-                antid = str(stream // 2)
+                stream = vals[pol]['channel']
+                antid = stream // 2
                 try:
                     timestamp = dateutil.parser.parse(stats[host]['timestamp'])
                 except KeyError:
@@ -375,8 +375,8 @@ class HeraCorrCM(object):
                     except:  # noqa
                         ant_status[key] = 'None'
                 for key, conv in conv_methods_by_stream.items():
-                    devid = conv[0].replace('{$STREAM}', stream)
-                    devid = devid.replace('{$PF}', antid).replace('{$POL}', pol)
+                    devid = conv[0].replace('{$STREAM}', str(stream))
+                    devid = devid.replace('{$PF}', str(antid)).replace('{$POL}', pol)
                     try:
                         ant_status[key] = conv[1](stats[host][devid])
                     except:  # noqa
