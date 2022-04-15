@@ -326,7 +326,7 @@ class HeraCorrCM(object):
         assert(hookup is not None)  # antenna hookup missing in redis
         ant_to_snap = hookup['ant_to_snap']
         stats = self._get_status_keys("snap")
-        conv_methods_by_stream = {
+        conv_func = {
             'host_ant_id': ("{$STREAM}", int),
             'adc_mean': ('stream{$STREAM}_mean', float),
             'adc_rms': ('stream{$STREAM}_mean', float),
@@ -339,8 +339,6 @@ class HeraCorrCM(object):
             'histogram': ('stream{$STREAM}_hist', json.loads),
             'autocorrelation': ('stream{$STREAM}_autocorr', json.loads),
             'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
-        }
-        conv_methods_by_ant = {
             'pam_id': ('pam{$PF}_id', json.loads),
             'fem_temp': ('fem{$PF}_temp', float),
             'fem_voltage': ('fem{$PF}_voltage', float),
@@ -351,30 +349,19 @@ class HeraCorrCM(object):
             'fem_switch': ('fem{$PF}_switch', str),
             'fem_imu_theta': ('fem{$PF}_imu_theta', float),
             'fem_imu_phi': ('fem{$PF}_imu_theta', float),
+            'timestamp': ('timestamp', dateutil.parser.parse),
+            'clip_count': ('eq_clip_count', int),
+            'fft_of': ('fft_overflow', lambda x: (x == 'True'))
         }
         ant_status = {}
         for ant, vals in ant_to_snap.items():
             for pol, hostinfo in vals.items():
                 antpol = "{}:{}".format(ant, pol)
-                ant_status[antpol] = {}
                 host = vals[pol]['host']
                 stream = vals[pol]['channel']
                 antid = stream // 2
-                try:
-                    timestamp = dateutil.parser.parse(stats[host]['timestamp'])
-                except KeyError:
-                    continue
-                ant_status[antpol] = {'f_host': host, 'host_ant_id': stream,
-                                      'clip_count': int(stats[host]['eq_clip_count']),
-                                      'fft_of': stats[host]['fft_overflow'] == 'True',
-                                      'timestamp': timestamp}
-                for key, conv in conv_methods_by_ant.items():
-                    devid = conv[0].replace('{$PF}', str(antid))
-                    try:
-                        ant_status[antpol][key] = conv[1](stats[host][devid])
-                    except:  # noqa
-                        ant_status[key] = 'None'
-                for key, conv in conv_methods_by_stream.items():
+                ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
+                for key, conv in conv_func.items():
                     devid = conv[0].replace('{$STREAM}', str(stream))
                     devid = devid.replace('{$PF}', str(antid)).replace('{$POL}', pol)
                     try:
