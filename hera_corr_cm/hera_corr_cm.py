@@ -321,44 +321,62 @@ class HeraCorrCM(object):
 
             Unknown values return the string "None"
         """
-        stats = self._get_status_keys("ant")
-        conv_methods = {
-            'adc_mean': float,
-            'adc_rms': float,
-            'adc_power': float,
-            'f_host': str,
-            'host_ant_id': int,
-            'pam_atten': int,
-            'pam_power': float,
-            'pam_voltage': float,
-            'pam_current': float,
-            'pam_id': json.loads,
-            'fem_temp': float,
-            'fem_voltage': float,
-            'fem_current': float,
-            'fem_pressure': float,
-            'fem_humidity': float,
-            'fem_id': json.loads,
-            'fem_switch': str,
-            'fem_lna_power': lambda x: (x == 'True'),
-            'fem_imu_theta': float,
-            'fem_imu_phi': float,
-            'clip_count': int,
-            'fft_of': lambda x: (x == 'True'),
-            'eq_coeffs': json.loads,
-            'histogram': json.loads,
-            'autocorrelation': json.loads,
-            'timestamp': dateutil.parser.parse,
+        from . import redis_cm
+        hookup = redis_cm.read_maps_from_redis(self.r)
+        assert(hookup is not None)  # antenna hookup missing in redis
+        ant_to_snap = hookup['ant_to_snap']
+        stats = self._get_status_keys("snap")
+        conv_methods_by_stream = {
+            'host_ant_id': ("{$STREAM}", int),
+            'adc_mean': ('stream{$STREAM}_mean', float),
+            'adc_rms': ('stream{$STREAM}_mean', float),
+            'adc_power': ('stream{$STREAM}_mean', float),
+            'pam_atten': ('pam{$PF}_atten_{$POL}', int),
+            'pam_power': ('pam{$PF}_power_{$POL}', float),
+            'pam_voltage': ('pam{$PF}_voltage_{$POL}', float),
+            'pam_current': ('pam{$PF}_current_{$POL}', float),
+            'eq_coeffs': ('stream{$STREAM}_eq_coeffs', json.loads),
+            'histogram': ('stream{$STREAM}_hist', json.loads),
+            'autocorrelation': ('stream{$STREAM}_autocorr', json.loads),
+            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
         }
-        rv = {}
-        for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
-                try:
-                    rv[host][key] = convfunc(stats[host][key])
-                except:
-                    rv[host][key] = "None"
-        return rv
+        conv_methods_by_ant = {
+            'pam_id': ('pam{$PF}_id', json.loads),
+            'fem_temp': ('fem{$PF}_temp', float),
+            'fem_voltage': ('fem{$PF}_voltage', float),
+            'fem_current': ('fem{$PF}_current', float),
+            'fem_pressure': ('fem{$PF}_pressure', float),
+            'fem_humidity': ('fem{$PF}_humidity', float),
+            'fem_id': ('fem{$PF}_id', json.loads),
+            'fem_switch': ('fem{$PF}_switch', str),
+            'fem_imu_theta': ('fem{$PF}_imu_theta', float),
+            'fem_imu_phi': ('fem{$PF}_imu_theta', float),
+        }
+        ant_status = {}
+        for ant, vals in ant_to_snap.items():
+            for pol, hostinfo in vals.items():
+                antpol = "{}:{}".format(ant, pol)
+                ant_status[antpol] = {}
+                host = vals[pol]['host']
+                stream = vals[pol]['channel']
+                antid = stream // 2
+                ant_status[antpol] = {'f_host': host, 'host_ant_id': stream,
+                                      'clip_count': int(stats['eq_clip_count']),
+                                      'fft_of': stats['fft_overflow'] == 'True',
+                                      'timestamp': dateutil.parser.parse(stats['timestamp'])}
+                for key, conv in conv_methods_by_ant.items():
+                    devid = conv[0].replace('{$PF}', antid)
+                    try:
+                        ant_status[antpol][key] = conv[1](stats[devid])
+                    except:  # noqa
+                        ant_status[key] = 'None'
+                for key, conv in conv_methods_by_stream.items():
+                    devid = conv[0].replace('{$STREAM}', stream)
+                    devid = devid.replace('{$PF}', antid).replace('{$POL}', pol)
+                    try:
+                        ant_status[key] = conv[1](stats[devid])
+                    except:  # noqa
+                        ant_status[key] = 'None'
 
     def get_snaprf_status(self):
         """
