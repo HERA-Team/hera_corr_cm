@@ -327,7 +327,6 @@ class HeraCorrCM(object):
         ant_to_snap = hookup['ant_to_snap']
         stats = self._get_status_keys("snap")
         conv_func = {
-            'host_ant_id': ("{$STREAM}", int),
             'adc_mean': ('stream{$STREAM}_mean', float),
             'adc_rms': ('stream{$STREAM}_mean', float),
             'adc_power': ('stream{$STREAM}_mean', float),
