@@ -326,17 +326,17 @@ class HeraCorrCM(object):
         assert(hookup is not None)  # antenna hookup missing in redis
         ant_to_snap = hookup['ant_to_snap']
         stats = self._get_status_keys("snap")
-        conv_func = {
-            'adc_mean': ('stream{$STREAM}_mean', float),
-            'adc_rms': ('stream{$STREAM}_rms', float),
-            'adc_power': ('stream{$STREAM}_power', float),
+        conv_info = {
+            'adc_mean': ('stream{$CH}_mean', float),
+            'adc_rms': ('stream{$CH}_rms', float),
+            'adc_power': ('stream{$CH}_power', float),
             'pam_atten': ('pam{$PF}_atten_{$POL}', int),
             'pam_power': ('pam{$PF}_power_{$POL}', float),
             'pam_voltage': ('pam{$PF}_voltage', float),
             'pam_current': ('pam{$PF}_current', float),
-            'eq_coeffs': ('stream{$STREAM}_eq_coeffs', json.loads),
-            'histogram': ('stream{$STREAM}_hist', json.loads),
-            'autocorrelation': ('stream{$STREAM}_autocorr', json.loads),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
+            'histogram': ('stream{$CH}_hist', json.loads),
+            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
             'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
             'pam_id': ('pam{$PF}_id', json.loads),
             'fem_temp': ('fem{$PF}_temp', float),
@@ -356,20 +356,21 @@ class HeraCorrCM(object):
         for ant, vals in ant_to_snap.items():
             for pol, hostinfo in vals.items():
                 antpol = "{}:{}".format(ant, pol)
-                host = vals[pol]['host']
-                stream = vals[pol]['channel']
+                host = hostinfo['host']
+                stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
-                for key, conv in conv_func.items():
-                    devid = conv[0].replace('{$STREAM}', str(stream))
-                    devid = devid.replace('{$PF}', str(antid)).replace('{$POL}', pol)
+                for key, conv in conv_info.items():
+                    keyid = conv[0].replace('{$CH}', str(stream))
+                    keyid = keyid.replace('{$PF}', str(antid))
+                    keyid = keyid.replace('{$POL}', pol)
                     try:
-                        ant_status[antpol][key] = conv[1](stats[host][devid])
+                        ant_status[antpol][key] = conv[1](stats[host][keyid])
                     except:  # noqa
-                        ant_status[antpol][key] = 'Not Found'
+                        ant_status[antpol][key] = 'None'
         return ant_status
 
-    def get_snaprf_status(self):
+    def get_snaprf_status(self, numch=6):
         """
         Return a dictionary of SNAP input stats.
 
@@ -384,22 +385,29 @@ class HeraCorrCM(object):
 
             Unknown values return the string "None"
         """
-        stats = self._get_status_keys("snaprf")
-        conv_methods = {
-            'eq_coeffs': json.loads,
-            'histogram': json.loads,
-            'autocorrelation': json.loads,
-            'timestamp': dateutil.parser.parse,
+        stats = self._get_status_keys("snap")
+        conv_info = {
+            'timestamp': ('timestamp', dateutil.parser.parse),
+            'mean': ('stream{$CH}_mean', float),
+            'rms': ('stream{$CH}_rms', float),
+            'power': ('stream{$CH}_power', float),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
+            'histogram': ('stream{$CH}_hist', json.loads),
+            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
         }
-        rv = {}
-        for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
-                try:
-                    rv[host][key] = convfunc(stats[host][key])
-                except:
-                    rv[host][key] = "None"
-        return rv
+
+        rf_status = {}
+        for host, hostinfo in stats.items():
+            for stream in range(numch):
+                rfch = "{}:{}".format(host, stream)
+                rf_status[rfch] = {}
+                for key, conv in conv_info.items():
+                    keyid = conv[0].replace('{$CH}', str(stream))
+                    try:
+                        rf_status[rfch][key] = conv[1](stats[host][keyid])
+                    except:  # noqa
+                        rf_status[rfch][key] = 'None'
+        return rf_status
 
     def get_x_status(self):
         """Return a dictionary of X-engine status flags."""
