@@ -361,14 +361,13 @@ class HeraCorrCM(object):
                 stream = vals[pol]['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
-                print(antpol, host, stream, antid)
                 for key, conv in conv_func.items():
                     devid = conv[0].replace('{$STREAM}', str(stream))
                     devid = devid.replace('{$PF}', str(antid)).replace('{$POL}', pol)
                     try:
-                        ant_status[key] = conv[1](stats[host][devid])
+                        ant_status[antpol][key] = conv[1](stats[host][devid])
                     except:  # noqa
-                        ant_status[key] = 'None'
+                        ant_status[antpol][key] = 'Not Found'
         return ant_status
 
     def get_snaprf_status(self):
