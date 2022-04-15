@@ -378,11 +378,13 @@ class HeraCorrCM(object):
         Values of this dictionary are status key/val pairs.
 
         These keys are:
-            eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
+            eq_coeffs (list of floats) : Digital EQ coefficients for this host
             histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
-
+            mean (float): mean of power for this host:stream
+            rms (float): rms of power for this host:stream
+            power (float): total power for this host:stream
             Unknown values return the string "None"
         """
         stats = self._get_status_keys("snap")
