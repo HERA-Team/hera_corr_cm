@@ -358,8 +358,8 @@ class HeraCorrCM(object):
                 antpol = "{}:{}".format(ant, pol)
                 ant_status[antpol] = {}
                 host = vals[pol]['host']
-                stream = vals[pol]['channel']
-                antid = stream // 2
+                stream = str(vals[pol]['channel'])
+                antid = str(stream // 2)
                 try:
                     timestamp = dateutil.parser.parse(stats[host]['timestamp'])
                 except KeyError:
