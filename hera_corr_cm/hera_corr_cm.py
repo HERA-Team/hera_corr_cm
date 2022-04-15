@@ -360,10 +360,14 @@ class HeraCorrCM(object):
                 host = vals[pol]['host']
                 stream = vals[pol]['channel']
                 antid = stream // 2
+                try:
+                    timestamp = dateutil.parser.parse(stats[host]['timestamp'])
+                except KeyError:
+                    continue
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream,
                                       'clip_count': int(stats[host]['eq_clip_count']),
                                       'fft_of': stats[host]['fft_overflow'] == 'True',
-                                      'timestamp': dateutil.parser.parse(stats[host]['timestamp'])}
+                                      'timestamp': timestamp}
                 for key, conv in conv_methods_by_ant.items():
                     devid = conv[0].replace('{$PF}', antid)
                     try:
