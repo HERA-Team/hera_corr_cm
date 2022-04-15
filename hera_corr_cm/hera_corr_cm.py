@@ -368,6 +368,7 @@ class HeraCorrCM(object):
                         ant_status[key] = conv[1](stats[host][devid])
                     except:  # noqa
                         ant_status[key] = 'None'
+        return ant_status
 
     def get_snaprf_status(self):
         """
