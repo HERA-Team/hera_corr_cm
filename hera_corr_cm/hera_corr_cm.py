@@ -364,6 +364,8 @@ class HeraCorrCM(object):
             for pol, hostinfo in vals.items():
                 antpol = "{}:{}".format(ant, pol)
                 host = hostinfo['host']
+                if host not in stats:
+                    continue
                 stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
