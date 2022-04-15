@@ -361,20 +361,20 @@ class HeraCorrCM(object):
                 stream = vals[pol]['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream,
-                                      'clip_count': int(stats['eq_clip_count']),
-                                      'fft_of': stats['fft_overflow'] == 'True',
-                                      'timestamp': dateutil.parser.parse(stats['timestamp'])}
+                                      'clip_count': int(stats[host]['eq_clip_count']),
+                                      'fft_of': stats[host]['fft_overflow'] == 'True',
+                                      'timestamp': dateutil.parser.parse(stats[host]['timestamp'])}
                 for key, conv in conv_methods_by_ant.items():
                     devid = conv[0].replace('{$PF}', antid)
                     try:
-                        ant_status[antpol][key] = conv[1](stats[devid])
+                        ant_status[antpol][key] = conv[1](stats[host][devid])
                     except:  # noqa
                         ant_status[key] = 'None'
                 for key, conv in conv_methods_by_stream.items():
                     devid = conv[0].replace('{$STREAM}', stream)
                     devid = devid.replace('{$PF}', antid).replace('{$POL}', pol)
                     try:
-                        ant_status[key] = conv[1](stats[devid])
+                        ant_status[key] = conv[1](stats[host][devid])
                     except:  # noqa
                         ant_status[key] = 'None'
 
