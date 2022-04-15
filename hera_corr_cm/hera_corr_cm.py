@@ -328,12 +328,12 @@ class HeraCorrCM(object):
         stats = self._get_status_keys("snap")
         conv_func = {
             'adc_mean': ('stream{$STREAM}_mean', float),
-            'adc_rms': ('stream{$STREAM}_mean', float),
-            'adc_power': ('stream{$STREAM}_mean', float),
+            'adc_rms': ('stream{$STREAM}_rms', float),
+            'adc_power': ('stream{$STREAM}_power', float),
             'pam_atten': ('pam{$PF}_atten_{$POL}', int),
             'pam_power': ('pam{$PF}_power_{$POL}', float),
-            'pam_voltage': ('pam{$PF}_voltage_{$POL}', float),
-            'pam_current': ('pam{$PF}_current_{$POL}', float),
+            'pam_voltage': ('pam{$PF}_voltage', float),
+            'pam_current': ('pam{$PF}_current', float),
             'eq_coeffs': ('stream{$STREAM}_eq_coeffs', json.loads),
             'histogram': ('stream{$STREAM}_hist', json.loads),
             'autocorrelation': ('stream{$STREAM}_autocorr', json.loads),
@@ -347,7 +347,7 @@ class HeraCorrCM(object):
             'fem_id': ('fem{$PF}_id', json.loads),
             'fem_switch': ('fem{$PF}_switch', str),
             'fem_imu_theta': ('fem{$PF}_imu_theta', float),
-            'fem_imu_phi': ('fem{$PF}_imu_theta', float),
+            'fem_imu_phi': ('fem{$PF}_imu_phi', float),
             'timestamp': ('timestamp', dateutil.parser.parse),
             'clip_count': ('eq_clip_count', int),
             'fft_of': ('fft_overflow', lambda x: (x == 'True'))
