@@ -369,7 +369,7 @@ class HeraCorrCM(object):
                                       'fft_of': stats[host]['fft_overflow'] == 'True',
                                       'timestamp': timestamp}
                 for key, conv in conv_methods_by_ant.items():
-                    devid = conv[0].replace('{$PF}', antid)
+                    devid = conv[0].replace('{$PF}', str(antid))
                     try:
                         ant_status[antpol][key] = conv[1](stats[host][devid])
                     except:  # noqa
