@@ -17,7 +17,7 @@ from . import __package__, __version__
 if sys.version_info.major > 2:
     string_type = str
 else:
-    string_type = basestring
+    string_type = basestring  # noqa
 N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
@@ -197,12 +197,12 @@ class HeraCorrCM(object):
             return False
         try:
             t = float(v['time'])
-        except:
+        except:  # noqa
             self.logger.error("Failed to cast EQ coefficient upload time to float")
             return False
         try:
             coeffs = np.array(json.loads(v['values']), dtype=np.float)
-        except:
+        except:  # noqa
             self.logger.error("Failed to cast EQ coefficients to numpy float array")
             return False
         return t, coeffs
@@ -265,24 +265,31 @@ class HeraCorrCM(object):
             Unknown values return the string "None"
         """
         stats = self._get_status_keys("snap")
-        conv_methods = {
-            'pmb_alert': lambda x: bool(int(x)),
-            'pps_count': int,
-            'serial': str,
-            'temp': float,
-            'uptime': int,
-            'last_programmed': dateutil.parser.parse,
-            'timestamp': dateutil.parser.parse,
+        conv_info = {
+            'is_programmed': ('is_programmed', lambda x: (x == 'True')),
+            'adc_is_configured': ('adc_is_configured', lambda x: (x == '1')),
+            'is_initialized': ('is_initialized', lambda x: (x == '1')),
+            'dest_is_configured': ('dest_is_configured', lambda x: (x == '1')),
+            'version': ('version', str),
+            'sample_rate': ('sample_rate', float),
+            'input': ('input', str),
+            'pmb_alert': ('pmb_alert', lambda x: bool(int(x))),
+            'pps_count': ('pps_count', int),
+            'serial': ('serial', str),
+            'temp': ('temp', float),
+            'uptime': ('uptime', int),
+            'last_programmed': ('last_programmed', dateutil.parser.parse),
+            'timestamp': ('timestamp', dateutil.parser.parse),
         }
-        rv = {}
+        f_status = {}
         for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
+            f_status[host] = {}
+            for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    rv[host][key] = convfunc(stats[host][key])
-                except:
-                    rv[host][key] = "None"
-        return rv
+                    f_status[host][key] = cfunc(stats[host][ckey])
+                except:  # noqa
+                    f_status[host][key] = "None"
+        return f_status
 
     def get_ant_status(self):
         """
@@ -360,12 +367,12 @@ class HeraCorrCM(object):
                 stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
-                for key, conv in conv_info.items():
-                    keyid = conv[0].replace('{$CH}', str(stream))
-                    keyid = keyid.replace('{$PF}', str(antid))
-                    keyid = keyid.replace('{$POL}', pol)
+                for key, (ckey, cfunc) in conv_info.items():
+                    ckey = ckey.replace('{$CH}', str(stream))
+                    ckey = ckey.replace('{$PF}', str(antid))
+                    ckey = ckey.replace('{$POL}', pol)
                     try:
-                        ant_status[antpol][key] = conv[1](stats[host][keyid])
+                        ant_status[antpol][key] = cfunc(stats[host][ckey])
                     except:  # noqa
                         ant_status[antpol][key] = 'None'
         return ant_status
@@ -403,10 +410,10 @@ class HeraCorrCM(object):
             for stream in range(numch):
                 rfch = "{}:{}".format(host, stream)
                 rf_status[rfch] = {}
-                for key, conv in conv_info.items():
-                    keyid = conv[0].replace('{$CH}', str(stream))
+                for key, (ckey, cfunc) in conv_info.items():
+                    ckey = ckey.replace('{$CH}', str(stream))
                     try:
-                        rf_status[rfch][key] = conv[1](stats[host][keyid])
+                        rf_status[rfch][key] = cfunc(stats[host][ckey])
                     except:  # noqa
                         rf_status[rfch][key] = 'None'
         return rf_status
@@ -446,7 +453,7 @@ class HeraCorrCM(object):
                     fields = {k: float(vals[k])}
                     if np.isnan(fields[k]):
                         continue
-                except:
+                except:  # noqa
                     if isinstance(vals[k], (bytes)):
                         vals[k] = vals[k].decode("utf-8")
                     fields = {k: vals[k]}
