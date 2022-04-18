@@ -253,12 +253,23 @@ class HeraCorrCM(object):
         Keys of returned dictionaries are snap hostnames. Values of this dictionary are
         status key/val pairs.
 
+        For the conv_info dictionary, the format is:
+            key: name of the variable in the return dictionary from this method
+            tuple:  (redis key name, conversion method from redis to this method).
+
         These keys are:
-            pmb_alert (bool) : True if SNAP PSU controllers have issued an alert. False otherwise.
-            pps_count (int)  : Number of PPS pulses received since last programming cycle
-            serial (str)     : Serial number of this SNAP board
-            temp (float)     : Reported FPGA temperature (degrees C)
-            uptime (int)     : Multiples of 500e6 ADC clocks since last programming cycle
+            is_programmed (bool): True if the host is programmed
+            adc_is_configured (bool): True if the host adc is configured
+            is_initialized (bool): True if host is initialized
+            dest_is_configured (bool): True if dest_is_configured
+            version (str)      : Version of firmware installed
+            sample_rate (float): Sample rate in MHz
+            input (str)        : comma-delimited list of stream inputs, e.g. adc,adc,adc,adc,adc,adc
+            pmb_alert (bool)   : True if SNAP PSU controllers have issued an alert. False otherwise.
+            pps_count (int)    : Number of PPS pulses received since last programming cycle
+            serial (str)       : Serial number of this SNAP board
+            temp (float)       : Reported FPGA temperature (degrees C)
+            uptime (int)       : Multiples of 500e6 ADC clocks since last programming cycle
             last_programmed (datetime) : Last time this FPGA was programmed
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
@@ -297,6 +308,10 @@ class HeraCorrCM(object):
 
         Keys of returned dictionaries are of the form "<antenna number>:"<e|n>". Values of
         this dictionary are status key/val pairs.
+
+        For the conv_info dictionary, the format is:
+            key: name of the variable in the return dictionary from this method
+            tuple:  (redis key name, conversion method from redis to this method).
 
         These keys are:
             adc_mean (float)  : Mean ADC value (in ADC units)
@@ -386,9 +401,13 @@ class HeraCorrCM(object):
         Keys of returned dictionaries are of the form "<SNAP hostname>:"<SNAP input number>".
         Values of this dictionary are status key/val pairs.
 
+        For the conv_info dictionary, the format is:
+            key: name of the variable in the return dictionary from this method
+            tuple:  (redis key name, conversion method from redis to this method).
+
         These keys are:
             eq_coeffs (list of floats) : Digital EQ coefficients for this host
-            histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
+            histogram (list of ints) : List of counts representing ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
             mean (float): mean of power for this host:stream
