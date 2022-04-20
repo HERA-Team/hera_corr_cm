@@ -253,10 +253,6 @@ class HeraCorrCM(object):
         Keys of returned dictionaries are snap hostnames. Values of this dictionary are
         status key/val pairs.
 
-        For the conv_info dictionary, the format is:
-            key: name of the variable in the return dictionary from this method
-            tuple:  (redis key name, conversion method from redis to this method).
-
         These keys are:
             is_programmed (bool): True if the host is programmed
             adc_is_configured (bool): True if the host adc is configured
@@ -264,7 +260,10 @@ class HeraCorrCM(object):
             dest_is_configured (bool): True if dest_is_configured
             version (str)      : Version of firmware installed
             sample_rate (float): Sample rate in MHz
-            input (str)        : comma-delimited list of stream inputs, e.g. adc,adc,adc,adc,adc,adc
+            input (str)        : comma-delimited list of 6 stream inputs either:
+                adc = adc,adc,adc,adc,adc,adc
+                digital noise = noise-%d,noise-%d,noise-%d,noise-%d,noise-%d,noise-%d
+                                where %d is the noise seed.
             pmb_alert (bool)   : True if SNAP PSU controllers have issued an alert. False otherwise.
             pps_count (int)    : Number of PPS pulses received since last programming cycle
             serial (str)       : Serial number of this SNAP board
@@ -274,8 +273,16 @@ class HeraCorrCM(object):
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
             Unknown values return the string "None"
+
+        Returns
+        -------
+        dict
+            keys are the parameter names to be stored, values are the parameter values
         """
         stats = self._get_status_keys("snap")
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
             'is_programmed': ('is_programmed', lambda x: (x == 'True')),
             'adc_is_configured': ('adc_is_configured', lambda x: (x == '1')),
@@ -298,7 +305,7 @@ class HeraCorrCM(object):
             for key, (ckey, cfunc) in conv_info.items():
                 try:
                     f_status[host][key] = cfunc(stats[host][ckey])
-                except:  # noqa
+                except:
                     f_status[host][key] = "None"
         return f_status
 
@@ -308,10 +315,6 @@ class HeraCorrCM(object):
 
         Keys of returned dictionaries are of the form "<antenna number>:"<e|n>". Values of
         this dictionary are status key/val pairs.
-
-        For the conv_info dictionary, the format is:
-            key: name of the variable in the return dictionary from this method
-            tuple:  (redis key name, conversion method from redis to this method).
 
         These keys are:
             adc_mean (float)  : Mean ADC value (in ADC units)
@@ -342,12 +345,21 @@ class HeraCorrCM(object):
             fem_pressure (float) : in mb
 
             Unknown values return the string "None"
+
+        Returns
+        -------
+        dict
+            keys are the parameter names to be stored, values are the parameter values
+
         """
         from . import redis_cm
         hookup = redis_cm.read_maps_from_redis(self.r)
         assert(hookup is not None)  # antenna hookup missing in redis
         ant_to_snap = hookup['ant_to_snap']
         stats = self._get_status_keys("snap")
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
             'adc_mean': ('stream{$CH}_mean', float),
             'adc_rms': ('stream{$CH}_rms', float),
@@ -390,7 +402,7 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$POL}', pol)
                     try:
                         ant_status[antpol][key] = cfunc(stats[host][ckey])
-                    except:  # noqa
+                    except:
                         ant_status[antpol][key] = 'None'
         return ant_status
 
@@ -401,10 +413,6 @@ class HeraCorrCM(object):
         Keys of returned dictionaries are of the form "<SNAP hostname>:"<SNAP input number>".
         Values of this dictionary are status key/val pairs.
 
-        For the conv_info dictionary, the format is:
-            key: name of the variable in the return dictionary from this method
-            tuple:  (redis key name, conversion method from redis to this method).
-
         These keys are:
             eq_coeffs (list of floats) : Digital EQ coefficients for this host
             histogram (list of ints) : List of counts representing ADC histogram
@@ -414,8 +422,16 @@ class HeraCorrCM(object):
             rms (float): rms of power for this host:stream
             power (float): total power for this host:stream
             Unknown values return the string "None"
+
+        Returns
+        -------
+        dict
+            keys are the parameter names to be stored, values are the parameter values
         """
         stats = self._get_status_keys("snap")
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
             'timestamp': ('timestamp', dateutil.parser.parse),
             'mean': ('stream{$CH}_mean', float),
@@ -435,7 +451,7 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$CH}', str(stream))
                     try:
                         rf_status[rfch][key] = cfunc(stats[host][ckey])
-                    except:  # noqa
+                    except:
                         rf_status[rfch][key] = 'None'
         return rf_status
 
