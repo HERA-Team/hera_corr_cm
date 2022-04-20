@@ -406,6 +406,8 @@ class HeraCorrCM(object):
         """
         Return a dictionary of SNAP input stats.
 
+        This information is duplicated in ant_status, and this method is deprecated.
+
         These keys are:
             eq_coeffs (list of floats) : Digital EQ coefficients for this host
             histogram (list of ints) : List of counts representing ADC histogram
