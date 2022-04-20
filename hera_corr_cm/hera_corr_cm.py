@@ -248,10 +248,7 @@ class HeraCorrCM(object):
 
     def get_f_status(self):
         """
-        Return a dictionary of snap status flags.
-
-        Keys of returned dictionaries are snap hostnames. Values of this dictionary are
-        status key/val pairs.
+        Return a dictionary of snap status values.
 
         These keys are:
             is_programmed (bool): True if the host is programmed
@@ -276,8 +273,9 @@ class HeraCorrCM(object):
 
         Returns
         -------
-        dict
-            keys are the parameter names to be stored, values are the parameter values
+        dict of dicts
+            keys of the outer dict are the snap hostnames, values are the key/value pairs
+            of the listed keys above.
         """
         stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
@@ -313,9 +311,6 @@ class HeraCorrCM(object):
         """
         Return a dictionary of antenna status flags.
 
-        Keys of returned dictionaries are of the form "<antenna number>:"<e|n>". Values of
-        this dictionary are status key/val pairs.
-
         These keys are:
             adc_mean (float)  : Mean ADC value (in ADC units)
             adc_rms (float)   : RMS ADC value (in ADC units)
@@ -348,8 +343,9 @@ class HeraCorrCM(object):
 
         Returns
         -------
-        dict
-            keys are the parameter names to be stored, values are the parameter values
+        dict of dicts
+            keys of the outer dict are of the form <ant number>:<pol> and values are the
+            key/value pairs of the listed keys above.
 
         """
         from . import redis_cm
@@ -410,9 +406,6 @@ class HeraCorrCM(object):
         """
         Return a dictionary of SNAP input stats.
 
-        Keys of returned dictionaries are of the form "<SNAP hostname>:"<SNAP input number>".
-        Values of this dictionary are status key/val pairs.
-
         These keys are:
             eq_coeffs (list of floats) : Digital EQ coefficients for this host
             histogram (list of ints) : List of counts representing ADC histogram
@@ -425,8 +418,9 @@ class HeraCorrCM(object):
 
         Returns
         -------
-        dict
-            keys are the parameter names to be stored, values are the parameter values
+        dict of dicts
+            keys of the outer dict are of the form <snap hostname>:<snap input number>, values
+            are the key/value pairs of the listed keys above.
         """
         stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
