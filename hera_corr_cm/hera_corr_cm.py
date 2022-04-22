@@ -17,7 +17,7 @@ from . import __package__, __version__
 if sys.version_info.major > 2:
     string_type = str
 else:
-    string_type = basestring
+    string_type = basestring  # noqa
 N_CHAN = 16384
 SAMPLE_RATE = 500e6
 
@@ -197,12 +197,12 @@ class HeraCorrCM(object):
             return False
         try:
             t = float(v['time'])
-        except:
+        except:  # noqa
             self.logger.error("Failed to cast EQ coefficient upload time to float")
             return False
         try:
             coeffs = np.array(json.loads(v['values']), dtype=np.float)
-        except:
+        except:  # noqa
             self.logger.error("Failed to cast EQ coefficients to numpy float array")
             return False
         return t, coeffs
@@ -248,48 +248,68 @@ class HeraCorrCM(object):
 
     def get_f_status(self):
         """
-        Return a dictionary of snap status flags.
-
-        Keys of returned dictionaries are snap hostnames. Values of this dictionary are
-        status key/val pairs.
+        Return a dictionary of snap status values.
 
         These keys are:
-            pmb_alert (bool) : True if SNAP PSU controllers have issued an alert. False otherwise.
-            pps_count (int)  : Number of PPS pulses received since last programming cycle
-            serial (str)     : Serial number of this SNAP board
-            temp (float)     : Reported FPGA temperature (degrees C)
-            uptime (int)     : Multiples of 500e6 ADC clocks since last programming cycle
+            is_programmed (bool): True if the host is programmed
+            adc_is_configured (bool): True if the host adc is configured
+            is_initialized (bool): True if host is initialized
+            dest_is_configured (bool): True if dest_is_configured
+            version (str)      : Version of firmware installed
+            sample_rate (float): Sample rate in MHz
+            input (str)        : comma-delimited list of 6 stream inputs either:
+                adc = adc,adc,adc,adc,adc,adc
+                digital noise = noise-%d,noise-%d,noise-%d,noise-%d,noise-%d,noise-%d
+                                where %d is the noise seed.
+            pmb_alert (bool)   : True if SNAP PSU controllers have issued an alert. False otherwise.
+            pps_count (int)    : Number of PPS pulses received since last programming cycle
+            serial (str)       : Serial number of this SNAP board
+            temp (float)       : Reported FPGA temperature (degrees C)
+            uptime (int)       : Multiples of 500e6 ADC clocks since last programming cycle
             last_programmed (datetime) : Last time this FPGA was programmed
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
 
             Unknown values return the string "None"
+
+        Returns
+        -------
+        dict of dicts
+            keys of the outer dict are the snap hostnames, values are the key/value pairs
+            of the listed keys above.
         """
         stats = self._get_status_keys("snap")
-        conv_methods = {
-            'pmb_alert': lambda x: bool(int(x)),
-            'pps_count': int,
-            'serial': str,
-            'temp': float,
-            'uptime': int,
-            'last_programmed': dateutil.parser.parse,
-            'timestamp': dateutil.parser.parse,
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
+        conv_info = {
+            'is_programmed': ('is_programmed', lambda x: (x == 'True')),
+            'adc_is_configured': ('adc_is_configured', lambda x: (x == '1')),
+            'is_initialized': ('is_initialized', lambda x: (x == '1')),
+            'dest_is_configured': ('dest_is_configured', lambda x: (x == '1')),
+            'version': ('version', str),
+            'sample_rate': ('sample_rate', float),
+            'input': ('input', str),
+            'pmb_alert': ('pmb_alert', lambda x: bool(int(x))),
+            'pps_count': ('pps_count', int),
+            'serial': ('serial', str),
+            'temp': ('temp', float),
+            'uptime': ('uptime', int),
+            'last_programmed': ('last_programmed', dateutil.parser.parse),
+            'timestamp': ('timestamp', dateutil.parser.parse),
         }
-        rv = {}
+        f_status = {}
         for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
+            f_status[host] = {}
+            for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    rv[host][key] = convfunc(stats[host][key])
+                    f_status[host][key] = cfunc(stats[host][ckey])
                 except:
-                    rv[host][key] = "None"
-        return rv
+                    f_status[host][key] = "None"
+        return f_status
 
     def get_ant_status(self):
         """
         Return a dictionary of antenna status flags.
-
-        Keys of returned dictionaries are of the form "<antenna number>:"<e|n>". Values of
-        this dictionary are status key/val pairs.
 
         These keys are:
             adc_mean (float)  : Mean ADC value (in ADC units)
@@ -320,77 +340,116 @@ class HeraCorrCM(object):
             fem_pressure (float) : in mb
 
             Unknown values return the string "None"
-        """
-        stats = self._get_status_keys("ant")
-        conv_methods = {
-            'adc_mean': float,
-            'adc_rms': float,
-            'adc_power': float,
-            'f_host': str,
-            'host_ant_id': int,
-            'pam_atten': int,
-            'pam_power': float,
-            'pam_voltage': float,
-            'pam_current': float,
-            'pam_id': json.loads,
-            'fem_temp': float,
-            'fem_voltage': float,
-            'fem_current': float,
-            'fem_pressure': float,
-            'fem_humidity': float,
-            'fem_id': json.loads,
-            'fem_switch': str,
-            'fem_lna_power': lambda x: (x == 'True'),
-            'fem_imu_theta': float,
-            'fem_imu_phi': float,
-            'clip_count': int,
-            'fft_of': lambda x: (x == 'True'),
-            'eq_coeffs': json.loads,
-            'histogram': json.loads,
-            'autocorrelation': json.loads,
-            'timestamp': dateutil.parser.parse,
-        }
-        rv = {}
-        for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
-                try:
-                    rv[host][key] = convfunc(stats[host][key])
-                except:
-                    rv[host][key] = "None"
-        return rv
 
-    def get_snaprf_status(self):
+        Returns
+        -------
+        dict of dicts
+            keys of the outer dict are of the form <ant number>:<pol> and values are the
+            key/value pairs of the listed keys above.
+
+        """
+        from . import redis_cm
+        hookup = redis_cm.read_maps_from_redis(self.r)
+        assert(hookup is not None)  # antenna hookup missing in redis
+        ant_to_snap = hookup['ant_to_snap']
+        stats = self._get_status_keys("snap")
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
+        conv_info = {
+            'adc_mean': ('stream{$CH}_mean', float),
+            'adc_rms': ('stream{$CH}_rms', float),
+            'adc_power': ('stream{$CH}_power', float),
+            'pam_atten': ('pam{$PF}_atten_{$POL}', int),
+            'pam_power': ('pam{$PF}_power_{$POL}', float),
+            'pam_voltage': ('pam{$PF}_voltage', float),
+            'pam_current': ('pam{$PF}_current', float),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
+            'histogram': ('stream{$CH}_hist', json.loads),
+            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
+            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
+            'pam_id': ('pam{$PF}_id', json.loads),
+            'fem_temp': ('fem{$PF}_temp', float),
+            'fem_voltage': ('fem{$PF}_voltage', float),
+            'fem_current': ('fem{$PF}_current', float),
+            'fem_pressure': ('fem{$PF}_pressure', float),
+            'fem_humidity': ('fem{$PF}_humidity', float),
+            'fem_id': ('fem{$PF}_id', json.loads),
+            'fem_switch': ('fem{$PF}_switch', str),
+            'fem_imu_theta': ('fem{$PF}_imu_theta', float),
+            'fem_imu_phi': ('fem{$PF}_imu_phi', float),
+            'timestamp': ('timestamp', dateutil.parser.parse),
+            'clip_count': ('eq_clip_count', int),
+            'fft_of': ('fft_overflow', lambda x: (x == 'True'))
+        }
+        ant_status = {}
+        for ant, vals in ant_to_snap.items():
+            for pol, hostinfo in vals.items():
+                antpol = "{}:{}".format(ant, pol)
+                host = hostinfo['host']
+                if host not in stats:
+                    continue
+                stream = hostinfo['channel']
+                antid = stream // 2
+                ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
+                for key, (ckey, cfunc) in conv_info.items():
+                    ckey = ckey.replace('{$CH}', str(stream))
+                    ckey = ckey.replace('{$PF}', str(antid))
+                    ckey = ckey.replace('{$POL}', pol)
+                    try:
+                        ant_status[antpol][key] = cfunc(stats[host][ckey])
+                    except:
+                        ant_status[antpol][key] = 'None'
+        return ant_status
+
+    def get_snaprf_status(self, numch=6):
         """
         Return a dictionary of SNAP input stats.
 
-        Keys of returned dictionaries are of the form "<SNAP hostname>:"<SNAP input number>".
-        Values of this dictionary are status key/val pairs.
+        This information is duplicated in ant_status, and this method is deprecated.
 
         These keys are:
-            eq_coeffs (list of floats) : Digital EQ coefficients for this antenna
-            histogram (list of ints) : Two-dim list: [[bin_centers][counts]] represent ADC histogram
+            eq_coeffs (list of floats) : Digital EQ coefficients for this host
+            histogram (list of ints) : List of counts representing ADC histogram
             autocorrelation (list of floats) : Autocorrelation spectrum
             timestamp (datetime) : Asynchronous timestamp that these status entries were gathered
-
+            mean (float): mean of power for this host:stream
+            rms (float): rms of power for this host:stream
+            power (float): total power for this host:stream
             Unknown values return the string "None"
+
+        Returns
+        -------
+        dict of dicts
+            keys of the outer dict are of the form <snap hostname>:<snap input number>, values
+            are the key/value pairs of the listed keys above.
         """
-        stats = self._get_status_keys("snaprf")
-        conv_methods = {
-            'eq_coeffs': json.loads,
-            'histogram': json.loads,
-            'autocorrelation': json.loads,
-            'timestamp': dateutil.parser.parse,
+        stats = self._get_status_keys("snap")
+        # For the conv_info dictionary below, the format is:
+        #     key: name of the variable in the return dictionary from this method
+        #     tuple:  (redis key name, conversion method from redis to this method).
+        conv_info = {
+            'timestamp': ('timestamp', dateutil.parser.parse),
+            'mean': ('stream{$CH}_mean', float),
+            'rms': ('stream{$CH}_rms', float),
+            'power': ('stream{$CH}_power', float),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
+            'histogram': ('stream{$CH}_hist', json.loads),
+            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
         }
-        rv = {}
-        for host, val in stats.items():
-            rv[host] = {}
-            for key, convfunc in conv_methods.items():
-                try:
-                    rv[host][key] = convfunc(stats[host][key])
-                except:
-                    rv[host][key] = "None"
-        return rv
+
+        rf_status = {}
+        for host, hostinfo in stats.items():
+            for stream in range(numch):
+                rfch = "{}:{}".format(host, stream)
+                rf_status[rfch] = {}
+                for key, (ckey, cfunc) in conv_info.items():
+                    ckey = ckey.replace('{$CH}', str(stream))
+                    try:
+                        rf_status[rfch][key] = cfunc(stats[host][ckey])
+                    except:
+                        rf_status[rfch][key] = 'None'
+        return rf_status
 
     def get_x_status(self):
         """Return a dictionary of X-engine status flags."""
@@ -427,7 +486,7 @@ class HeraCorrCM(object):
                     fields = {k: float(vals[k])}
                     if np.isnan(fields[k]):
                         continue
-                except:
+                except:  # noqa
                     if isinstance(vals[k], (bytes)):
                         vals[k] = vals[k].decode("utf-8")
                     fields = {k: vals[k]}
