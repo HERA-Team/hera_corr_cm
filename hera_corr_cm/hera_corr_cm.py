@@ -69,7 +69,7 @@ class HeraCorrCM(object):
                                                             decode_responses=True)
             self.redis_connections[redis_encoded] = redis.Redis(redishost)
         self.r = self.redis_connections[redishost]
-        self.renc = self.redis.connections[redis_encoded]
+        self.renc = self.redis_connections[redis_encoded]
 
     def is_recording(self):
         """
