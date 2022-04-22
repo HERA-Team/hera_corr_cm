@@ -219,7 +219,7 @@ class HeraCorrCM(object):
         """
         raise NotImplementedError('There is no code here.')
 
-    def _get_status_keys(self, stattype, decode_responses=True):
+    def _get_status_keys(self, stattype):
         """
         Get a list of keys which exist in redis.
 
@@ -237,6 +237,7 @@ class HeraCorrCM(object):
         """
         keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
+        decode_responses = False if stattype == 'stat' else True
         for key in self.r.scan_iter(keystart + "*"):
             rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
@@ -358,7 +359,7 @@ class HeraCorrCM(object):
         hookup = redis_cm.read_maps_from_redis(self.r)
         assert(hookup is not None)  # antenna hookup missing in redis
         ant_to_snap = hookup['ant_to_snap']
-        stats = self._get_status_keys("snap", decode_responses=False)
+        stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
