@@ -249,9 +249,11 @@ class HeraCorrCM(object):
         Converts the keys and values of the resulting byte array to a string.
         """
         if decode_responses:
-            return {key: val for key, val in self.r.hgetall(rkey).items()}
+            return self.r.hgetall(rkey)
+            # return {key: val for key, val in self.r.hgetall(rkey).items()}
         else:
-            return {key: val for key, val in self.renc.hgetall(rkey).items()}
+            return self.renc.hgetall(rkey)
+            # return {key: val for key, val in self.renc.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -305,11 +307,12 @@ class HeraCorrCM(object):
             'timestamp': ('timestamp', dateutil.parser.parse),
         }
         f_status = {}
-        for host, val in stats.items():
+        for ehost, val in stats.items():
+            host = ehost.decode()
             f_status[host] = {}
             for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    f_status[host][key] = cfunc(stats[host][ckey])
+                    f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except:
                     f_status[host][key] = "None"
         return f_status
