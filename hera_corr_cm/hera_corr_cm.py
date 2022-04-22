@@ -237,7 +237,7 @@ class HeraCorrCM(object):
         """
         keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
-        decode_responses = False if stattype == 'stat' else True
+        decode_responses = False if stattype == 'snap' else True
         for key in self.r.scan_iter(keystart + "*"):
             rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
