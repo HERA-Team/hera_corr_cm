@@ -62,11 +62,14 @@ class HeraCorrCM(object):
         # multiple HeraCorrCM instances in the same program. But in most cases
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
+        redis_encoded = redishost + ':encoded'
         if redishost not in list(self.redis_connections.keys()):
             self.redis_connections[redishost] = redis.Redis(redishost,
                                                             max_connections=100,
                                                             decode_responses=True)
+            self.redis_connections[redis_encoded] = redis.Redis(redishost)
         self.r = self.redis_connections[redishost]
+        self.renc = self.redis.connections[redis_encoded]
 
     def is_recording(self):
         """
@@ -216,7 +219,7 @@ class HeraCorrCM(object):
         """
         raise NotImplementedError('There is no code here.')
 
-    def _get_status_keys(self, stattype):
+    def _get_status_keys(self, stattype, decode_responses=True):
         """
         Get a list of keys which exist in redis.
 
@@ -235,16 +238,19 @@ class HeraCorrCM(object):
         keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
         for key in self.r.scan_iter(keystart + "*"):
-            rv[key.lstrip(keystart)] = self._hgetall(key)
+            rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
 
-    def _hgetall(self, rkey):
+    def _hgetall(self, rkey, decode_responses):
         """
         Generate a wrapper around self.r.hgetall(rkey).
 
         Converts the keys and values of the resulting byte array to a string.
         """
-        return {key: val for key, val in self.r.hgetall(rkey).items()}
+        if decode_responses:
+            return {key: val for key, val in self.r.hgetall(rkey).items()}
+        else:
+            return {key: val for key, val in self.renc.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -352,7 +358,7 @@ class HeraCorrCM(object):
         hookup = redis_cm.read_maps_from_redis(self.r)
         assert(hookup is not None)  # antenna hookup missing in redis
         ant_to_snap = hookup['ant_to_snap']
-        stats = self._get_status_keys("snap")
+        stats = self._get_status_keys("snap", decode_responses=False)
         # For the conv_info dictionary below, the format is:
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
