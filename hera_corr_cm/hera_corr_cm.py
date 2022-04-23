@@ -364,30 +364,30 @@ class HeraCorrCM(object):
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
-            'adc_mean': ('stream{$CH}_mean', float),
-            'adc_rms': ('stream{$CH}_rms', float),
-            'adc_power': ('stream{$CH}_power', float),
-            'pam_atten': ('pam{$PF}_atten_{$POL}', int),
-            'pam_power': ('pam{$PF}_power_{$POL}', float),
-            'pam_voltage': ('pam{$PF}_voltage', float),
-            'pam_current': ('pam{$PF}_current', float),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer),
-            'histogram': ('stream{$CH}_hist', np.frombuffer),
-            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer),
-            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
-            'pam_id': ('pam{$PF}_id', json.loads),
-            'fem_temp': ('fem{$PF}_temp', float),
-            'fem_voltage': ('fem{$PF}_voltage', float),
-            'fem_current': ('fem{$PF}_current', float),
-            'fem_pressure': ('fem{$PF}_pressure', float),
-            'fem_humidity': ('fem{$PF}_humidity', float),
-            'fem_id': ('fem{$PF}_id', json.loads),
-            'fem_switch': ('fem{$PF}_switch', str),
-            'fem_imu_theta': ('fem{$PF}_imu_theta', float),
-            'fem_imu_phi': ('fem{$PF}_imu_phi', float),
-            'timestamp': ('timestamp', dateutil.parser.parse),
-            'clip_count': ('eq_clip_count', int),
-            'fft_of': ('fft_overflow', lambda x: (x == 'True'))
+            'adc_mean': ('stream{$CH}_mean', float, None),
+            'adc_rms': ('stream{$CH}_rms', float, None),
+            'adc_power': ('stream{$CH}_power', float, None),
+            'pam_atten': ('pam{$PF}_atten_{$POL}', int, None),
+            'pam_power': ('pam{$PF}_power_{$POL}', float, None),
+            'pam_voltage': ('pam{$PF}_voltage', float, None),
+            'pam_current': ('pam{$PF}_current', float, None),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, int),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float),
+            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None),
+            'pam_id': ('pam{$PF}_id', json.loads, None),
+            'fem_temp': ('fem{$PF}_temp', float, None),
+            'fem_voltage': ('fem{$PF}_voltage', float, None),
+            'fem_current': ('fem{$PF}_current', float, None),
+            'fem_pressure': ('fem{$PF}_pressure', float, None),
+            'fem_humidity': ('fem{$PF}_humidity', float, None),
+            'fem_id': ('fem{$PF}_id', json.loads, None),
+            'fem_switch': ('fem{$PF}_switch', str, None),
+            'fem_imu_theta': ('fem{$PF}_imu_theta', float, None),
+            'fem_imu_phi': ('fem{$PF}_imu_phi', float, None),
+            'timestamp': ('timestamp', dateutil.parser.parse, None),
+            'clip_count': ('eq_clip_count', int, None),
+            'fft_of': ('fft_overflow', lambda x: (x == 'True'), None)
         }
         ant_status = {}
         for ant, vals in ant_to_snap.items():
@@ -399,14 +399,14 @@ class HeraCorrCM(object):
                 stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
-                for key, (ckey, cfunc) in conv_info.items():
+                for key, (ckey, cfunc, carg) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
                     try:
                         ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                     except UnicodeDecodeError:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey])
+                        ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
                     except Exception as e:
                         ant_status[antpol][key] = str(e)
         return ant_status
