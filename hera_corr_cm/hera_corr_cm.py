@@ -409,12 +409,14 @@ class HeraCorrCM(object):
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: " + key + " " + str(e)
+                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey])
+                            ant_status[antpol][key] = msg
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: " + key + " " + str(e)
+                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey])
+                            ant_status[antpol][key] = msg
         return ant_status
 
     def get_snaprf_status(self, numch=6):
