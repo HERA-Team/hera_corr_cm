@@ -249,11 +249,9 @@ class HeraCorrCM(object):
         Converts the keys and values of the resulting byte array to a string.
         """
         if decode_responses:
-            return self.r.hgetall(rkey)
-            # return {key: val for key, val in self.r.hgetall(rkey).items()}
+            return {key: val for key, val in self.r.hgetall(rkey).items()}
         else:
-            return self.renc.hgetall(rkey)
-            # return {key: val for key, val in self.renc.hgetall(rkey).items()}
+            return {key.decode(): val for key, val in self.renc.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -311,7 +309,7 @@ class HeraCorrCM(object):
             f_status[host] = {}
             for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    f_status[host][key] = cfunc(stats[host][ckey.encode()].decode())
+                    f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except Exception as e:
                     f_status[host][key] = str(e)
         return f_status
@@ -374,7 +372,7 @@ class HeraCorrCM(object):
             'pam_voltage': ('pam{$PF}_voltage', float),
             'pam_current': ('pam{$PF}_current', float),
             'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer),
-            'histogram': ('stream{$CH}_hist', json.loads),
+            'histogram': ('stream{$CH}_hist', np.frombuffer),
             'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer),
             'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
             'pam_id': ('pam{$PF}_id', json.loads),
@@ -406,9 +404,9 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
                     try:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey.encode()].decode())
+                        ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                     except UnicodeDecodeError:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey.encode()])
+                        ant_status[antpol][key] = cfunc(stats[host][ckey])
                     except Exception as e:
                         ant_status[antpol][key] = str(e)
         return ant_status
