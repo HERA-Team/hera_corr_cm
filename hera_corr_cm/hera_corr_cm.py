@@ -252,7 +252,6 @@ class HeraCorrCM(object):
             return self.r.hgetall(rkey)
             # return {key: val for key, val in self.r.hgetall(rkey).items()}
         else:
-            print("NOT DECODED")
             return self.renc.hgetall(rkey)
             # return {key: val for key, val in self.renc.hgetall(rkey).items()}
 
@@ -308,14 +307,13 @@ class HeraCorrCM(object):
             'timestamp': ('timestamp', dateutil.parser.parse),
         }
         f_status = {}
-        for ehost, val in stats.items():
-            host = ehost.decode()
+        for host, val in stats.items():
             f_status[host] = {}
             for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    f_status[host][key] = cfunc(stats[host][ckey].decode())
-                except:
-                    f_status[host][key] = "None"
+                    f_status[host][key] = cfunc(stats[host][ckey.encode()].decode())
+                except Exception as e:
+                    f_status[host][key] = str(e)
         return f_status
 
     def get_ant_status(self):
@@ -408,9 +406,9 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
                     try:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey])
-                    except:
-                        ant_status[antpol][key] = 'None'
+                        ant_status[antpol][key] = cfunc(stats[host][ckey.encode()].decode())
+                    except Exception as e:
+                        ant_status[antpol][key] = str(e)
         return ant_status
 
     def get_snaprf_status(self, numch=6):
@@ -458,8 +456,8 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$CH}', str(stream))
                     try:
                         rf_status[rfch][key] = cfunc(stats[host][ckey])
-                    except:
-                        rf_status[rfch][key] = 'None'
+                    except Exception as e:
+                        rf_status[rfch][key] = str(e)
         return rf_status
 
     def get_x_status(self):
