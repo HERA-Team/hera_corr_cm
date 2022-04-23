@@ -362,7 +362,9 @@ class HeraCorrCM(object):
         stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
         #     key: name of the variable in the return dictionary from this method
-        #     tuple:  (redis key name, conversion method from redis to this method).
+        #     tuple:  (redis key name,
+        #              conversion method from redis to this method,
+        #              arg for conversion method).
         conv_info = {
             'adc_mean': ('stream{$CH}_mean', float, None),
             'adc_rms': ('stream{$CH}_rms', float, None),
@@ -403,12 +405,16 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$CH}', str(stream))
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
-                    try:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
-                    except UnicodeDecodeError:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
-                    except Exception as e:
-                        ant_status[antpol][key] = str(e)
+                    if carg is not None:
+                        try:
+                            ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
+                        except Exception as e:
+                            ant_status[antpol][key] = str(e)
+                    else:
+                        try:
+                            ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
+                        except Exception as e:
+                            ant_status[antpol][key] = str(e)
         return ant_status
 
     def get_snaprf_status(self, numch=6):
