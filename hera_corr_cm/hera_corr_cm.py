@@ -409,13 +409,13 @@ class HeraCorrCM(object):
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
                         except Exception as e:
-                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey])
+                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey]))
                             ant_status[antpol][key] = msg
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
-                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey])
+                            msg = "Except: {} {} -- {}".format(key, str(e), str(stats[host][ckey]))
                             ant_status[antpol][key] = msg
         return ant_status
 
