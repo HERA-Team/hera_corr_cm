@@ -252,6 +252,7 @@ class HeraCorrCM(object):
             return self.r.hgetall(rkey)
             # return {key: val for key, val in self.r.hgetall(rkey).items()}
         else:
+            print("NOT DECODED")
             return self.renc.hgetall(rkey)
             # return {key: val for key, val in self.renc.hgetall(rkey).items()}
 
