@@ -407,6 +407,8 @@ class HeraCorrCM(object):
                     ckey = ckey.replace('{$POL}', pol)
                     try:
                         ant_status[antpol][key] = cfunc(stats[host][ckey.encode()].decode())
+                    except UnicodeDecodeError:
+                        ant_status[antpol][key] = cfunc(stats[host][ckey.encode()])
                     except Exception as e:
                         ant_status[antpol][key] = str(e)
         return ant_status
