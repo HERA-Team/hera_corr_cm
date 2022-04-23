@@ -373,7 +373,7 @@ class HeraCorrCM(object):
             'pam_power': ('pam{$PF}_power_{$POL}', float, None),
             'pam_voltage': ('pam{$PF}_voltage', float, None),
             'pam_current': ('pam{$PF}_current', float, None),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, int),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float),
             'histogram': ('stream{$CH}_hist', np.frombuffer, int),
             'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float),
             'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None),
