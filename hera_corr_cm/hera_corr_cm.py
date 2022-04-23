@@ -311,7 +311,7 @@ class HeraCorrCM(object):
                 try:
                     f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except Exception as e:
-                    f_status[host][key] = "Exception: " + key + " " + str(e)
+                    f_status[host][key] = "Exception: {}".format(str(e))
         return f_status
 
     def get_ant_status(self):
@@ -409,12 +409,12 @@ class HeraCorrCM(object):
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
                         except Exception as e:
-                            ant_status[antpol][key] = "Except: {} {}".format(key, str(e))
+                            ant_status[antpol][key] = "Exception: {}".format(str(e))
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
-                            ant_status[antpol][key] = "Except: {} {}".format(key, str(e))
+                            ant_status[antpol][key] = "Exception: {}".format(str(e))
         return ant_status
 
     def get_snaprf_status(self, numch=6):
@@ -463,7 +463,7 @@ class HeraCorrCM(object):
                     try:
                         rf_status[rfch][key] = cfunc(stats[host][ckey])
                     except Exception as e:
-                        rf_status[rfch][key] = "Exception: " + key + " " + str(e)
+                        rf_status[rfch][key] = "Exception: {}".format(str(e))
         return rf_status
 
     def get_x_status(self):
