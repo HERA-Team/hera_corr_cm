@@ -444,13 +444,13 @@ class HeraCorrCM(object):
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
-            'timestamp': ('timestamp', dateutil.parser.parse),
-            'mean': ('stream{$CH}_mean', float),
-            'rms': ('stream{$CH}_rms', float),
-            'power': ('stream{$CH}_power', float),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
-            'histogram': ('stream{$CH}_hist', json.loads),
-            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
+            'timestamp': ('timestamp', dateutil.parser.parse, None),
+            'mean': ('stream{$CH}_mean', float, None),
+            'rms': ('stream{$CH}_rms', float, None),
+            'power': ('stream{$CH}_power', float, None),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float),
         }
 
         rf_status = {}
@@ -458,12 +458,18 @@ class HeraCorrCM(object):
             for stream in range(numch):
                 rfch = "{}:{}".format(host, stream)
                 rf_status[rfch] = {}
-                for key, (ckey, cfunc) in conv_info.items():
+                for key, (ckey, cfunc, carg) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
-                    try:
-                        rf_status[rfch][key] = cfunc(stats[host][ckey])
-                    except Exception as e:
-                        rf_status[rfch][key] = "Exception: {}".format(str(e))
+                    if carg is not None:
+                        try:
+                            rf_status[rfch][key] = cfunc(stats[host][ckey], carg)
+                        except Exception as e:
+                            rf_status[rfch][key] = "Exception: {}".format(str(e))
+                    else:
+                        try:
+                            rf_status[rfch][key] = cfunc(stats[host][ckey].decode())
+                        except Exception as e:
+                            rf_status[rfch][key] = "Exception: {}".format(str(e))
         return rf_status
 
     def get_x_status(self):
