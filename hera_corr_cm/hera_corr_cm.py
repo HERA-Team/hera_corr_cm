@@ -373,9 +373,9 @@ class HeraCorrCM(object):
             'pam_power': ('pam{$PF}_power_{$POL}', float, None),
             'pam_voltage': ('pam{$PF}_voltage', float, None),
             'pam_current': ('pam{$PF}_current', float, None),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, np.float32),
             'histogram': ('stream{$CH}_hist', np.frombuffer, int),
-            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, np.float32),
             'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None),
             'pam_id': ('pam{$PF}_id', json.loads, None),
             'fem_temp': ('fem{$PF}_temp', float, None),
@@ -448,9 +448,9 @@ class HeraCorrCM(object):
             'mean': ('stream{$CH}_mean', float, None),
             'rms': ('stream{$CH}_rms', float, None),
             'power': ('stream{$CH}_power', float, None),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, np.float32),
             'histogram': ('stream{$CH}_hist', np.frombuffer, int),
-            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, np.float32),
         }
 
         rf_status = {}
