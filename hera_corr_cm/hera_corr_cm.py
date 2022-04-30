@@ -415,7 +415,7 @@ class HeraCorrCM(object):
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
-                            not_exceptions = +1
+                            not_exceptions += 1
                         except Exception as e:
                             ant_status[antpol][key] = "Exception: {}".format(str(e))
                 if not_exceptions < 3:
