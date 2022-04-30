@@ -449,13 +449,13 @@ class HeraCorrCM(object):
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
-            'timestamp': ('timestamp', dateutil.parser.parse, None),
-            'mean': ('stream{$CH}_mean', float, None),
-            'rms': ('stream{$CH}_rms', float, None),
-            'power': ('stream{$CH}_power', float, None),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, np.float32),
-            'histogram': ('stream{$CH}_hist', np.frombuffer, int),
-            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, np.float32),
+            'timestamp': ('timestamp', dateutil.parser.parse, None, None),
+            'mean': ('stream{$CH}_mean', float, None, None),
+            'rms': ('stream{$CH}_rms', float, None, None),
+            'power': ('stream{$CH}_power', float, None, None),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float, np.float32),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int, int),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float, np.float32),
         }
 
         rf_status = {}
@@ -463,11 +463,11 @@ class HeraCorrCM(object):
             for stream in range(numch):
                 rfch = "{}:{}".format(host, stream)
                 rf_status[rfch] = {}
-                for key, (ckey, cfunc, carg) in conv_info.items():
+                for key, (ckey, cfunc, carg, ccst) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
                     if carg is not None:
                         try:
-                            rf_status[rfch][key] = cfunc(stats[host][ckey], carg)
+                            rf_status[rfch][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                         except Exception as e:
                             rf_status[rfch][key] = "Exception: {}".format(str(e))
                     else:
