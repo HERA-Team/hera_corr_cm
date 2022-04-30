@@ -401,6 +401,7 @@ class HeraCorrCM(object):
                 stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
+                all_exceptions = True
                 for key, (ckey, cfunc, carg) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
                     ckey = ckey.replace('{$PF}', str(antid))
@@ -408,13 +409,17 @@ class HeraCorrCM(object):
                     if carg is not None:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg)
+                            all_exceptions = False
                         except Exception as e:
                             ant_status[antpol][key] = "Exception: {}".format(str(e))
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
+                            all_exceptions = False
                         except Exception as e:
                             ant_status[antpol][key] = "Exception: {}".format(str(e))
+                if all_exceptions:
+                    del(ant_status[antpol])
         return ant_status
 
     def get_snaprf_status(self, numch=6):
