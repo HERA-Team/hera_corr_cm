@@ -62,11 +62,14 @@ class HeraCorrCM(object):
         # multiple HeraCorrCM instances in the same program. But in most cases
         # sharing means the code will just do The Right Thing, and won't leave
         # a trail of a orphaned connections.
+        redis_encoded = redishost + ':encoded'
         if redishost not in list(self.redis_connections.keys()):
             self.redis_connections[redishost] = redis.Redis(redishost,
                                                             max_connections=100,
                                                             decode_responses=True)
+            self.redis_connections[redis_encoded] = redis.Redis(redishost)
         self.r = self.redis_connections[redishost]
+        self.renc = self.redis_connections[redis_encoded]
 
     def is_recording(self):
         """
@@ -234,17 +237,21 @@ class HeraCorrCM(object):
         """
         keystart = "status:{stat}:".format(stat=stattype)
         rv = {}
+        decode_responses = False if stattype == 'snap' else True
         for key in self.r.scan_iter(keystart + "*"):
-            rv[key.lstrip(keystart)] = self._hgetall(key)
+            rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
 
-    def _hgetall(self, rkey):
+    def _hgetall(self, rkey, decode_responses):
         """
         Generate a wrapper around self.r.hgetall(rkey).
 
         Converts the keys and values of the resulting byte array to a string.
         """
-        return {key: val for key, val in self.r.hgetall(rkey).items()}
+        if decode_responses:
+            return {key: val for key, val in self.r.hgetall(rkey).items()}
+        else:
+            return {key.decode(): val for key, val in self.renc.hgetall(rkey).items()}
 
     def get_f_status(self):
         """
@@ -302,9 +309,9 @@ class HeraCorrCM(object):
             f_status[host] = {}
             for key, (ckey, cfunc) in conv_info.items():
                 try:
-                    f_status[host][key] = cfunc(stats[host][ckey])
-                except:
-                    f_status[host][key] = "None"
+                    f_status[host][key] = cfunc(stats[host][ckey].decode())
+                except Exception as e:
+                    f_status[host][key] = "Exception: {}".format(str(e))
         return f_status
 
     def get_ant_status(self):
@@ -355,32 +362,34 @@ class HeraCorrCM(object):
         stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
         #     key: name of the variable in the return dictionary from this method
-        #     tuple:  (redis key name, conversion method from redis to this method).
+        #     tuple:  (redis key name,
+        #              conversion method from redis to this method,
+        #              arg for conversion method).
         conv_info = {
-            'adc_mean': ('stream{$CH}_mean', float),
-            'adc_rms': ('stream{$CH}_rms', float),
-            'adc_power': ('stream{$CH}_power', float),
-            'pam_atten': ('pam{$PF}_atten_{$POL}', int),
-            'pam_power': ('pam{$PF}_power_{$POL}', float),
-            'pam_voltage': ('pam{$PF}_voltage', float),
-            'pam_current': ('pam{$PF}_current', float),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
-            'histogram': ('stream{$CH}_hist', json.loads),
-            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
-            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True')),
-            'pam_id': ('pam{$PF}_id', json.loads),
-            'fem_temp': ('fem{$PF}_temp', float),
-            'fem_voltage': ('fem{$PF}_voltage', float),
-            'fem_current': ('fem{$PF}_current', float),
-            'fem_pressure': ('fem{$PF}_pressure', float),
-            'fem_humidity': ('fem{$PF}_humidity', float),
-            'fem_id': ('fem{$PF}_id', json.loads),
-            'fem_switch': ('fem{$PF}_switch', str),
-            'fem_imu_theta': ('fem{$PF}_imu_theta', float),
-            'fem_imu_phi': ('fem{$PF}_imu_phi', float),
-            'timestamp': ('timestamp', dateutil.parser.parse),
-            'clip_count': ('eq_clip_count', int),
-            'fft_of': ('fft_overflow', lambda x: (x == 'True'))
+            'adc_mean': ('stream{$CH}_mean', float, None, None),
+            'adc_rms': ('stream{$CH}_rms', float, None, None),
+            'adc_power': ('stream{$CH}_power', float, None, None),
+            'pam_atten': ('pam{$PF}_atten_{$POL}', int, None, None),
+            'pam_power': ('pam{$PF}_power_{$POL}', float, None, None),
+            'pam_voltage': ('pam{$PF}_voltage', float, None, None),
+            'pam_current': ('pam{$PF}_current', float, None, None),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float, np.float32),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int, int),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float, np.float32),
+            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None, None),
+            'pam_id': ('pam{$PF}_id', json.loads, None, None),
+            'fem_temp': ('fem{$PF}_temp', float, None, None),
+            'fem_voltage': ('fem{$PF}_voltage', float, None, None),
+            'fem_current': ('fem{$PF}_current', float, None, None),
+            'fem_pressure': ('fem{$PF}_pressure', float, None, None),
+            'fem_humidity': ('fem{$PF}_humidity', float, None, None),
+            'fem_id': ('fem{$PF}_id', json.loads, None, None),
+            'fem_switch': ('fem{$PF}_switch', str, None, None),
+            'fem_imu_theta': ('fem{$PF}_imu_theta', float, None, None),
+            'fem_imu_phi': ('fem{$PF}_imu_phi', float, None, None),
+            'timestamp': ('timestamp', dateutil.parser.parse, None, None),
+            'clip_count': ('eq_clip_count', int, None, None),
+            'fft_of': ('fft_overflow', lambda x: (x == 'True'), None, None)
         }
         ant_status = {}
         for ant, vals in ant_to_snap.items():
@@ -392,14 +401,25 @@ class HeraCorrCM(object):
                 stream = hostinfo['channel']
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
-                for key, (ckey, cfunc) in conv_info.items():
+                not_exceptions = 0
+                for key, (ckey, cfunc, carg, ccst) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
-                    try:
-                        ant_status[antpol][key] = cfunc(stats[host][ckey])
-                    except:
-                        ant_status[antpol][key] = 'None'
+                    if carg is not None:
+                        try:
+                            ant_status[antpol][key] = cfunc(stats[host][ckey], carg).astype(ccst)
+                            not_exceptions += 1
+                        except Exception as e:
+                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                    else:
+                        try:
+                            ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
+                            not_exceptions += 1
+                        except Exception as e:
+                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                if not_exceptions < 3:
+                    del(ant_status[antpol])
         return ant_status
 
     def get_snaprf_status(self, numch=6):
@@ -429,13 +449,13 @@ class HeraCorrCM(object):
         #     key: name of the variable in the return dictionary from this method
         #     tuple:  (redis key name, conversion method from redis to this method).
         conv_info = {
-            'timestamp': ('timestamp', dateutil.parser.parse),
-            'mean': ('stream{$CH}_mean', float),
-            'rms': ('stream{$CH}_rms', float),
-            'power': ('stream{$CH}_power', float),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', json.loads),
-            'histogram': ('stream{$CH}_hist', json.loads),
-            'autocorrelation': ('stream{$CH}_autocorr', json.loads),
+            'timestamp': ('timestamp', dateutil.parser.parse, None, None),
+            'mean': ('stream{$CH}_mean', float, None, None),
+            'rms': ('stream{$CH}_rms', float, None, None),
+            'power': ('stream{$CH}_power', float, None, None),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float, np.float32),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int, int),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float, np.float32),
         }
 
         rf_status = {}
@@ -443,12 +463,18 @@ class HeraCorrCM(object):
             for stream in range(numch):
                 rfch = "{}:{}".format(host, stream)
                 rf_status[rfch] = {}
-                for key, (ckey, cfunc) in conv_info.items():
+                for key, (ckey, cfunc, carg, ccst) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
-                    try:
-                        rf_status[rfch][key] = cfunc(stats[host][ckey])
-                    except:
-                        rf_status[rfch][key] = 'None'
+                    if carg is not None:
+                        try:
+                            rf_status[rfch][key] = cfunc(stats[host][ckey], carg).astype(ccst)
+                        except Exception as e:
+                            rf_status[rfch][key] = "Exception: {}".format(str(e))
+                    else:
+                        try:
+                            rf_status[rfch][key] = cfunc(stats[host][ckey].decode())
+                        except Exception as e:
+                            rf_status[rfch][key] = "Exception: {}".format(str(e))
         return rf_status
 
     def get_x_status(self):
