@@ -301,8 +301,8 @@ class HeraCorrCM(object):
             'serial': ('serial', str),
             'temp': ('temp', float),
             'uptime': ('uptime', int),
-            'last_programmed': ('last_programmed', dateutil.parser.parse,
-            'timestamp': ('timestamp', dateutil.parser.parse),
+            'last_programmed': ('last_programmed', dateutil.parser.parse),
+            'timestamp': ('timestamp', dateutil.parser.parse)
         }
         f_status = {}
         for host, val in stats.items():
