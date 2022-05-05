@@ -365,31 +365,33 @@ class HeraCorrCM(object):
         #     tuple:  (redis key name,
         #              conversion method from redis to this method,
         #              arg for conversion method).
+        arr32 = np.array([-1.0], dtype=np.float32)
+        arrint = np.array([-1], dtype=int)
         conv_info = {
-            'adc_mean': ('stream{$CH}_mean', float, None, None),
-            'adc_rms': ('stream{$CH}_rms', float, None, None),
-            'adc_power': ('stream{$CH}_power', float, None, None),
-            'pam_atten': ('pam{$PF}_atten_{$POL}', int, None, None),
-            'pam_power': ('pam{$PF}_power_{$POL}', float, None, None),
-            'pam_voltage': ('pam{$PF}_voltage', float, None, None),
-            'pam_current': ('pam{$PF}_current', float, None, None),
-            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float, np.float32),
-            'histogram': ('stream{$CH}_hist', np.frombuffer, int, int),
-            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float, np.float32),
-            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None, None),
-            'pam_id': ('pam{$PF}_id', json.loads, None, None),
-            'fem_temp': ('fem{$PF}_temp', float, None, None),
-            'fem_voltage': ('fem{$PF}_voltage', float, None, None),
-            'fem_current': ('fem{$PF}_current', float, None, None),
-            'fem_pressure': ('fem{$PF}_pressure', float, None, None),
-            'fem_humidity': ('fem{$PF}_humidity', float, None, None),
-            'fem_id': ('fem{$PF}_id', json.loads, None, None),
-            'fem_switch': ('fem{$PF}_switch', str, None, None),
-            'fem_imu_theta': ('fem{$PF}_imu_theta', float, None, None),
-            'fem_imu_phi': ('fem{$PF}_imu_phi', float, None, None),
-            'timestamp': ('timestamp', dateutil.parser.parse, None, None),
-            'clip_count': ('eq_clip_count', int, None, None),
-            'fft_of': ('fft_overflow', lambda x: (x == 'True'), None, None)
+            'adc_mean': ('stream{$CH}_mean', float, None, None, -1.0),
+            'adc_rms': ('stream{$CH}_rms', float, None, None, -1.0),
+            'adc_power': ('stream{$CH}_power', float, None, None, -1.0),
+            'pam_atten': ('pam{$PF}_atten_{$POL}', int, None, None, -1),
+            'pam_power': ('pam{$PF}_power_{$POL}', float, None, None, -1.0),
+            'pam_voltage': ('pam{$PF}_voltage', float, None, None, -1.0),
+            'pam_current': ('pam{$PF}_current', float, None, None, -1.0),
+            'eq_coeffs': ('stream{$CH}_eq_coeffs', np.frombuffer, float, np.float32, arr32),
+            'histogram': ('stream{$CH}_hist', np.frombuffer, int, int, arrint),
+            'autocorrelation': ('stream{$CH}_autocorr', np.frombuffer, float, np.float32, arr32),
+            'fem_lna_power': ('fem{$PF}_lna_power_{$POL}', lambda x: (x == 'True'), None, None, False),
+            'pam_id': ('pam{$PF}_id', json.loads, None, None, 'unknown'),
+            'fem_temp': ('fem{$PF}_temp', float, None, None, -1.0),
+            'fem_voltage': ('fem{$PF}_voltage', float, None, None, -1.0),
+            'fem_current': ('fem{$PF}_current', float, None, None, -1.0),
+            'fem_pressure': ('fem{$PF}_pressure', float, None, None, -1.0),
+            'fem_humidity': ('fem{$PF}_humidity', float, None, None, -1.0),
+            'fem_id': ('fem{$PF}_id', json.loads, None, None, 'unknown'),
+            'fem_switch': ('fem{$PF}_switch', str, None, None, 'unknown'),
+            'fem_imu_theta': ('fem{$PF}_imu_theta', float, None, None, -1.0),
+            'fem_imu_phi': ('fem{$PF}_imu_phi', float, None, None, -1.0),
+            'timestamp': ('timestamp', dateutil.parser.parse, None, None, None),
+            'clip_count': ('eq_clip_count', int, None, None, -1),
+            'fft_of': ('fft_overflow', lambda x: (x == 'True'), None, None, False)
         }
         ant_status = {}
         for ant, vals in ant_to_snap.items():
@@ -402,7 +404,7 @@ class HeraCorrCM(object):
                 antid = stream // 2
                 ant_status[antpol] = {'f_host': host, 'host_ant_id': stream}
                 not_exceptions = 0
-                for key, (ckey, cfunc, carg, ccst) in conv_info.items():
+                for key, (ckey, cfunc, carg, ccst, cexc) in conv_info.items():
                     ckey = ckey.replace('{$CH}', str(stream))
                     ckey = ckey.replace('{$PF}', str(antid))
                     ckey = ckey.replace('{$POL}', pol)
@@ -411,13 +413,15 @@ class HeraCorrCM(object):
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                             not_exceptions += 1
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            # ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            ant_status[antpol][key] = cexc
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                             not_exceptions += 1
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            # ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            ant_status[antpol][key] = cexc
                 if not_exceptions < 3:
                     del(ant_status[antpol])
         return ant_status
