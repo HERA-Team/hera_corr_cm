@@ -320,7 +320,7 @@ class HeraCorrCM(object):
                     f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except Exception as e:
                     # f_status[host][key] = "Exception: {}".format(str(e))
-                    f_status[host][key] = cexc
+                    f_status[host][key] = None
         return f_status
 
     def get_ant_status(self):
@@ -424,14 +424,14 @@ class HeraCorrCM(object):
                             not_exceptions += 1
                         except Exception as e:
                             # ant_status[antpol][key] = "Exception: {}".format(str(e))
-                            ant_status[antpol][key] = cexc
+                            ant_status[antpol][key] = None
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                             not_exceptions += 1
                         except Exception as e:
                             # ant_status[antpol][key] = "Exception: {}".format(str(e))
-                            ant_status[antpol][key] = cexc
+                            ant_status[antpol][key] = None
                 if not_exceptions < 3:
                     del(ant_status[antpol])
         return ant_status
@@ -487,13 +487,13 @@ class HeraCorrCM(object):
                             rf_status[rfch][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                         except Exception as e:
                             # rf_status[rfch][key] = "Exception: {}".format(str(e))
-                            rf_status[rfch][key] = cexc
+                            rf_status[rfch][key] = None
                     else:
                         try:
                             rf_status[rfch][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
                             # rf_status[rfch][key] = "Exception: {}".format(str(e))
-                            rf_status[rfch][key] = cexc
+                            rf_status[rfch][key] = None
         return rf_status
 
     def get_x_status(self):
