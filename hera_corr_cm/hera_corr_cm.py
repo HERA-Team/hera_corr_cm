@@ -250,7 +250,7 @@ class HeraCorrCM(object):
             rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
 
-    def _hgetall(self, rkey, decode_responses):
+    def _hgetall(self, rkey, decode_responses=True):
         """
         Generate a wrapper around self.r.hgetall(rkey).
 
