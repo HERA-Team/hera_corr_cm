@@ -311,7 +311,6 @@ class HeraCorrCM(object):
                 try:
                     f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except Exception as e:
-                    # f_status[host][key] = "Exception: {}".format(str(e))
                     f_status[host][key] = None
         return f_status
 
@@ -412,14 +411,12 @@ class HeraCorrCM(object):
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                             not_exceptions += 1
                         except Exception as e:
-                            # ant_status[antpol][key] = "Exception: {}".format(str(e))
                             ant_status[antpol][key] = None
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                             not_exceptions += 1
                         except Exception as e:
-                            # ant_status[antpol][key] = "Exception: {}".format(str(e))
                             ant_status[antpol][key] = None
                 if not_exceptions < 3:
                     del(ant_status[antpol])
@@ -473,13 +470,11 @@ class HeraCorrCM(object):
                         try:
                             rf_status[rfch][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                         except Exception as e:
-                            # rf_status[rfch][key] = "Exception: {}".format(str(e))
                             rf_status[rfch][key] = None
                     else:
                         try:
                             rf_status[rfch][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
-                            # rf_status[rfch][key] = "Exception: {}".format(str(e))
                             rf_status[rfch][key] = None
         return rf_status
 
