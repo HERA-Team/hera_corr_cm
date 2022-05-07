@@ -242,7 +242,7 @@ class HeraCorrCM(object):
             rv[key.lstrip(keystart)] = self._hgetall(key, decode_responses=decode_responses)
         return rv
 
-    def _hgetall(self, rkey, decode_responses):
+    def _hgetall(self, rkey, decode_responses=True):
         """
         Generate a wrapper around self.r.hgetall(rkey).
 
@@ -302,7 +302,7 @@ class HeraCorrCM(object):
             'temp': ('temp', float),
             'uptime': ('uptime', int),
             'last_programmed': ('last_programmed', dateutil.parser.parse),
-            'timestamp': ('timestamp', dateutil.parser.parse),
+            'timestamp': ('timestamp', dateutil.parser.parse)
         }
         f_status = {}
         for host, val in stats.items():
@@ -311,7 +311,7 @@ class HeraCorrCM(object):
                 try:
                     f_status[host][key] = cfunc(stats[host][ckey].decode())
                 except Exception as e:
-                    f_status[host][key] = "Exception: {}".format(str(e))
+                    f_status[host][key] = None
         return f_status
 
     def get_ant_status(self):
@@ -411,13 +411,13 @@ class HeraCorrCM(object):
                             ant_status[antpol][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                             not_exceptions += 1
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            ant_status[antpol][key] = None
                     else:
                         try:
                             ant_status[antpol][key] = cfunc(stats[host][ckey].decode())
                             not_exceptions += 1
                         except Exception as e:
-                            ant_status[antpol][key] = "Exception: {}".format(str(e))
+                            ant_status[antpol][key] = None
                 if not_exceptions < 3:
                     del(ant_status[antpol])
         return ant_status
@@ -444,6 +444,7 @@ class HeraCorrCM(object):
             keys of the outer dict are of the form <snap hostname>:<snap input number>, values
             are the key/value pairs of the listed keys above.
         """
+
         stats = self._get_status_keys("snap")
         # For the conv_info dictionary below, the format is:
         #     key: name of the variable in the return dictionary from this method
@@ -469,12 +470,12 @@ class HeraCorrCM(object):
                         try:
                             rf_status[rfch][key] = cfunc(stats[host][ckey], carg).astype(ccst)
                         except Exception as e:
-                            rf_status[rfch][key] = "Exception: {}".format(str(e))
+                            rf_status[rfch][key] = None
                     else:
                         try:
                             rf_status[rfch][key] = cfunc(stats[host][ckey].decode())
                         except Exception as e:
-                            rf_status[rfch][key] = "Exception: {}".format(str(e))
+                            rf_status[rfch][key] = None
         return rf_status
 
     def get_x_status(self):
