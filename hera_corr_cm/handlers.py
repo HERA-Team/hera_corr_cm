@@ -93,7 +93,12 @@ def add_default_log_handlers(logger, redishostname='redishost', fglevel=logging.
 
     syslog_handler = logging.handlers.SysLogHandler(address='/dev/log')
     syslog_handler.setLevel(bglevel)
-    syslog_handler.setFormatter(formatter)
+    syslog_handler.setFormatter(
+        logging.Formatter(
+            "%(module)s[%(process)s]: %(message)s",
+            "%FT%H:%m:%s%z",
+        )
+    )
     logger.addHandler(syslog_handler)
 
     redis_host = redis.StrictRedis(redishostname, socket_timeout=1, decode_responses=True)
