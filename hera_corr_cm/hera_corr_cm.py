@@ -161,9 +161,19 @@ class HeraCorrCM(object):
         md5 = self.r.hget("snap_configuration", "md5")
         return float(config_time), yaml.load(config, Loader=yaml.FullLoader), md5
 
+    def fem_switch_state(self):
+        """
+        Return FEM switch state and time.
+        """
+        x = self._hgetall("corr:fem_switch_state")
+        return x["state"], float(x["time"])
+
     def noise_diode_is_on(self):
         """
         Return if noise diode is on.
+
+        Deprecated -- this is left to not break things for now, but there is no
+        data in the key that this monitors after Feb 2021
 
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if noise diode is on. Else False.
@@ -174,6 +184,9 @@ class HeraCorrCM(object):
     def load_is_on(self):
         """
         Return if load is on.
+
+        Deprecated -- this is left to not break things for now, but there is no
+        data in the key that this monitors after Feb 2021
 
         Returns: enable_state, UNIX timestamp (float) of last state change
         enable_state is True if load is on. Else False.
