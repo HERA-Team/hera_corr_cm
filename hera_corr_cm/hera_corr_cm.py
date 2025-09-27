@@ -511,7 +511,7 @@ class HeraCorrCM(object):
             data_points = rv.setdefault(key, [])
             _, _, host, pipeline, _ = key.split("/")
             vals = self.r.hgetall(key)
-            timestamp = datetime.datetime.utcnow().isoformat()
+            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
             tags = {"host": host, "pipeline_id": pipeline}
             measurement = "hashpipes"
             for k in vals.keys():
@@ -586,9 +586,13 @@ class HeraCorrCM(object):
         rv["snap"]["version"] = snap_init["hera_corr_f_version"]
         rv["snap"]["init_args"] = snap_init["init_args"]
         rv["snap"]["config"] = yaml.load(snap_init["config"], Loader=yaml.FullLoader)
-        rv["snap"]["config_timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["config_time"]))  # noqa
+        rv["snap"]["config_timestamp"] = datetime.datetime.fromtimestamp(
+            float(snap_init["config_time"]), datetime.UTC
+        )
         rv["snap"]["config_md5"] = snap_init["md5"]
-        rv["snap"]["timestamp"] = datetime.datetime.utcfromtimestamp(float(snap_init["init_time"]))
+        rv["snap"]["timestamp"] = datetime.datetime.fromtimestamp(
+            float(snap_init["init_time"]), datetime.UTC
+        )
 
         return rv
 
